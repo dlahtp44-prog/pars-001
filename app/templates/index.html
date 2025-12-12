@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="fw-bold mb-3">📦 PARS WMS 메인</h3>
+
+<div class="row g-3">
+    <div class="col-6 col-md-3">
+        <a href="/inbound" class="btn btn-primary w-100 py-3">입고</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/outbound" class="btn btn-danger w-100 py-3">출고</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/move" class="btn btn-warning w-100 py-3">이동</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/inventory" class="btn btn-success w-100 py-3">재고</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/location" class="btn btn-secondary w-100 py-3">Location</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/history" class="btn btn-dark w-100 py-3">이력</a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/qr/scan" class="btn btn-outline-dark w-100 py-3">QR 스캔</a>
+    </div>
+</div>
+
+{% endblock %}
+

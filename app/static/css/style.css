@@ -1,0 +1,44 @@
+/* 기본 스타일 */
+body {
+    background-color: #f8f9fa;
+}
+
+/* 카드 공통 디자인 */
+.card {
+    border-radius: 12px;
+}
+
+/* 입력 UI */
+input, select, textarea {
+    font-size: 16px;
+}
+
+/* 버튼 */
+.btn {
+    font-size: 16px;
+}
+
+/* 반응형(모바일 폭 768 이하) */
+@media (max-width: 768px) {
+    .btn {
+        padding: 14px !important;
+        font-size: 18px;
+    }
+}
+
+/* ------------------------------------------------------- */
+/* iOS Safari 100vh 버그 해결 코드 (중요) */
+/* ------------------------------------------------------- */
+:root {
+    --vh: 1vh;
+}
+
+.main-container {
+    height: calc(var(--vh) * 100);
+}
+
+/* 전체화면이 필요한 컨테이너에 적용할 클래스 */
+.full-height,
+.main-container {
+    height: calc(var(--vh, 1vh) * 100);
+}
