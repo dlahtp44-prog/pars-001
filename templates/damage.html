@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>CS / 파손 등록</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>CS / 파손 등록</h2>
+
+    <!--
+      UX 정책
+      - 발생일: 서버에서 오늘 날짜 기본값 제공
+      - 사용자는 자유롭게 수정 가능
+      - readonly / disabled 절대 사용하지 않음
+    -->
+    <form method="post" action="/damage" class="grid">
+
+      <!-- 발생일 / 수량 -->
+      <div class="grid-2">
+        <div>
+          <label>발생일</label>
+          <input
+            type="date"
+            name="occurred_at"
+            value="{{ occurred_at }}"
+            required
+          >
+        </div>
+        <div>
+          <label>수량</label>
+          <input
+            type="number"
+            step="0.001"
+            min="0.001"
+            name="qty"
+            value="1"
+            required
+          >
+        </div>
+      </div>
+
+      <!-- 창고 / 로케이션 -->
+      <div class="grid-2">
+        <div>
+          <label>창고</label>
+          <input
+            type="text"
+            name="warehouse"
+            placeholder="예: 서이천창고"
+          >
+        </div>
+        <div>
+          <label>로케이션</label>
+          <input
+            type="text"
+            name="location"
+            placeholder="예: D01-01"
+          >
+        </div>
+      </div>
+
+      <!-- 브랜드 / 품번 -->
+      <div class="grid-2">
+        <div>
+          <label>브랜드</label>
+          <input
+            type="text"
+            name="brand"
+            placeholder="예: FLORIM"
+          >
+        </div>
+        <div>
+          <label>품번</label>
+          <input
+            type="text"
+            name="item_code"
+            placeholder="예: 766109"
+          >
+        </div>
+      </div>
+
+      <!-- 품명 / LOT -->
+      <div class="grid-2">
+        <div>
+          <label>품명</label>
+          <input
+            type="text"
+            name="item_name"
+            placeholder="예: Walks/1.0 Gray SOFT"
+          >
+        </div>
+        <div>
+          <label>LOT</label>
+          <input
+            type="text"
+            name="lot"
+            placeholder="예: H48N5"
+          >
+        </div>
+      </div>
+
+      <!-- 규격 / 재고 차감 -->
+      <div class="grid-2">
+        <div>
+          <label>규격</label>
+          <input
+            type="text"
+            name="spec"
+            placeholder="예: 600*600*9"
+          >
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:22px;">
+          <input
+            type="checkbox"
+            id="deduct_inventory"
+            name="deduct_inventory"
+            value="1"
+          >
+          <label for="deduct_inventory" style="margin:0;">
+            재고에서 수량 차감
+          </label>
+        </div>
+      </div>
+
+      <!-- 파손 유형 -->
+      <div>
+        <label>파손 유형</label>
+        <select name="damage_code_id" required>
+          <option value="">-- 파손 유형 선택 --</option>
+          {% for c in codes %}
+            <option value="{{ c.id }}">
+              {{ c.category }} / {{ c.type }} / {{ c.situation }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- 상세 내용 -->
+      <div>
+        <label>상세 내용</label>
+        <textarea
+          name="detail"
+          rows="4"
+          placeholder="파손 상세 내용을 입력하세요."
+        ></textarea>
+      </div>
+
+      <!-- 버튼 -->
+      <div class="actions">
+        <button class="btn" type="submit">등록</button>
+        <a class="btn ghost" href="/damage/history">파손 이력</a>
+        <a class="btn ghost" href="/">메인</a>
+      </div>
+    </form>
+
+    {% if msg %}
+      <div class="notice">{{ msg }}</div>
+    {% endif %}
+
+  </div>
+</div>
+</body>
+</html>
