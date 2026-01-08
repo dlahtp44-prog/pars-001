@@ -27,20 +27,21 @@ def create_damage(
     """
     deduct = deduct_inventory == "1"
 
-    add_damage_history(
-        occurred_at=occurred_at,
-        warehouse=warehouse,
-        location=location,
-        brand=brand,
-        item_code=item_code,
-        item_name=item_name,
-        lot=lot,
-        spec=spec,
-        qty=qty,
-        damage_code_id=damage_code_id,
-        detail=detail,
-        deduct_inventory=deduct,  # ✅ 핵심
-    )
+add_damage_history(
+    occurred_at=occurred_at,
+    warehouse=warehouse,
+    location=location,
+    brand=brand,
+    item_code=item_code,
+    item_name=item_name,
+    lot=lot,
+    spec=spec,
+    qty=qty,
+    damage_code_id=damage_code_id,
+    detail=detail,
+    deduct_inventory=deduct_inventory,
+)
+ 
 
     # 등록 후 CS 이력 페이지로 이동
     return RedirectResponse(
