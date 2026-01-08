@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CS / 파손 현황</title>
+</head>
+<body>
+
+<h2>CS / 파손 현황</h2>
+
+<form method="get">
+  년도 <input name="year" value="{{ year }}" size="4">
+  월 <input name="month" value="{{ month }}" size="2">
+  <button type="submit">조회</button>
+</form>
+
+<hr>
+
+<h3>📊 파손 유형별 집계</h3>
+<table border="1">
+  <tr>
+    <th>구분</th>
+    <th>건수</th>
+  </tr>
+  {% for s in summary %}
+  <tr>
+    <td>{{ s.category }}</td>
+    <td>{{ s.cnt }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<hr>
+
+<h3>📋 CS 상세 내역</h3>
+<a href="/page/damage-history/excel">엑셀 다운로드</a>
+
+<table border="1">
+  <tr>
+    <th>발생일</th>
+    <th>창고</th>
+    <th>로케이션</th>
+    <th>브랜드</th>
+    <th>품번</th>
+    <th>품명</th>
+    <th>LOT</th>
+    <th>규격</th>
+    <th>수량</th>
+    <th>구분</th>
+    <th>유형</th>
+    <th>상황</th>
+    <th>비고</th>
+  </tr>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.occurred_at }}</td>
+    <td>{{ r.warehouse }}</td>
+    <td>{{ r.location }}</td>
+    <td>{{ r.brand }}</td>
+    <td>{{ r.item_code }}</td>
+    <td>{{ r.item_name }}</td>
+    <td>{{ r.lot }}</td>
+    <td>{{ r.spec }}</td>
+    <td>{{ r.qty }}</td>
+    <td>{{ r.category }}</td>
+    <td>{{ r.type }}</td>
+    <td>{{ r.situation }}</td>
+    <td>{{ r.detail }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+</body>
+</html>

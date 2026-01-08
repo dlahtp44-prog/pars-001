@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>이동</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>이동</h2>
+
+    <form id="f">
+      <label>창고</label>
+      <input name="warehouse" type="text" required>
+      <label>작업자</label>
+      <input name="operator" type="text" placeholder="예: 홍길동" required>
+
+
+      <label>출발 로케이션</label>
+      <input name="from_location" type="text" required>
+
+      <label>도착 로케이션</label>
+      <input name="to_location" type="text" required>
+
+      <label>브랜드</label>
+      <input name="brand" type="text" required>
+
+      <label>품번</label>
+      <input name="item_code" type="text" required>
+
+      <label>품명</label>
+      <input name="item_name" type="text" required>
+
+      <label>LOT</label>
+      <input name="lot" type="text" required>
+
+      <label>규격</label>
+      <input name="spec" type="text" required>
+
+      <label>수량</label>
+      <input name="qty" type="number" min="1" step="1" required>
+
+      <label>비고</label>
+      <input name="note" type="text" placeholder="선택">
+
+      <button type="submit">이동 처리</button>
+    </form>
+
+    <pre id="out" class="card" style="white-space:pre-wrap"></pre>
+    <p><a href="/">← 메인</a></p>
+  </div>
+</div>
+
+<script>
+const f=document.getElementById('f');
+const out=document.getElementById('out');
+f.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  out.textContent='처리중...';
+  const fd=new FormData(f);
+  const res=await fetch('/api/move', {method:'POST', body:fd});
+  out.textContent=await res.text();
+});
+</script>
+</body>
+</html>

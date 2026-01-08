@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CS / 파손 등록</title>
+</head>
+<body>
+
+<h2>CS / 파손 등록</h2>
+
+<form method="post" action="/api/damage">
+
+    <label>발생일</label><br>
+    <input type="date" name="occurred_at"
+           value="{{ request.state.today if request.state.today else '' }}"
+           required>
+    <br><br>
+
+    <label>창고</label><br>
+    <input type="text" name="warehouse" value="{{ warehouse }}" readonly><br>
+
+    <label>로케이션</label><br>
+    <input type="text" name="location" value="{{ location }}" readonly><br>
+
+    <label>브랜드</label><br>
+    <input type="text" name="brand" value="{{ brand }}" readonly><br>
+
+    <label>품번</label><br>
+    <input type="text" name="item_code" value="{{ item_code }}" readonly><br>
+
+    <label>품명</label><br>
+    <input type="text" name="item_name" value="{{ item_name }}" readonly><br>
+
+    <label>LOT</label><br>
+    <input type="text" name="lot" value="{{ lot }}" readonly><br>
+
+    <label>규격</label><br>
+    <input type="text" name="spec" value="{{ spec }}" readonly><br>
+
+    <label>수량</label><br>
+    <input type="number" name="qty" min="1" required><br><br>
+
+    <label>
+        <input type="checkbox" name="deduct_inventory" value="1">
+        재고에서 수량 차감
+    </label>
+    <br><br>
+
+    <label>파손 유형</label><br>
+    <select name="damage_code_id" required>
+        <option value="">선택</option>
+        {% for c in damage_codes %}
+            <option value="{{ c.id }}">
+                {{ c.category }} / {{ c.type }} / {{ c.situation }}
+            </option>
+        {% endfor %}
+    </select>
+    <br><br>
+
+    <label>상세 내용</label><br>
+    <textarea name="detail" rows="4" cols="40"
+              placeholder="파손 상황을 간단히 입력하세요"></textarea>
+    <br><br>
+
+    <button type="submit">등록</button>
+
+</form>
+
+</body>
+</html>

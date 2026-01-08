@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>이력조회</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>이력현황</h2>
+
+    <form method="get" action="/page/history">
+      <div class="grid2">
+        <div>
+          <label>년(YYYY)</label>
+          <input name="year" value="{{year}}" placeholder="예: 2026"/>
+        </div>
+        <div>
+          <label>월(MM)</label>
+          <input name="month" value="{{month}}" placeholder="예: 1"/>
+        </div>
+        <div>
+          <label>일(DD)</label>
+          <input name="day" value="{{day}}" placeholder="예: 2"/>
+        </div>
+        <div>
+          <label>표시개수(limit)</label>
+          <input name="limit" value="{{limit}}" placeholder="예: 300"/>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="btn" type="submit">검색</button>
+
+        <a class="btn"
+           href="/page/history/excel?year={{year}}&month={{month}}&day={{day}}">
+          엑셀 다운로드
+        </a>
+
+        <a class="btn secondary" href="/">메인</a>
+      </div>
+    </form>
+
+    <div style="overflow:auto; margin-top:14px;">
+      <table>
+        <thead>
+          <tr>
+            <th class="small">시간</th>
+            <th>유형</th>
+            <th>창고</th>
+            <th>로케이션</th>
+            <th>출발</th>
+            <th>도착</th>
+            <th>브랜드</th>
+            <th>품번</th>
+            <th>품명</th>
+            <th>LOT</th>
+            <th>규격</th>
+            <th>수량</th>
+            <th>비고</th>
+            <th>작업자</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="small">{{r.created_at}}</td>
+            <td>{{r.type}}</td>
+            <td>{{r.warehouse}}</td>
+            <td>{{r.location}}</td>
+            <td>{{r.from_location}}</td>
+            <td>{{r.to_location}}</td>
+            <td>{{r.brand}}</td>
+            <td>{{r.item_code}}</td>
+            <td>{{r.item_name}}</td>
+            <td>{{r.lot}}</td>
+            <td>{{r.spec}}</td>
+            <td style="text-align:right;">{{r.qty}}</td>
+            <td>{{r.note}}</td>
+            <td>{{r.operator}}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="small" style="margin-top:10px;">
+      검색조건: 년/월/일 (운영매뉴얼 기준)
+    </p>
+  </div>
+</div>
+</body>
+</html>

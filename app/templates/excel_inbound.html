@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>입고 엑셀 업로드</h1>
+
+<div class="card">
+  <div class="card-title">업로드</div>
+  <form class="row" action="/api/excel/inbound" method="post" enctype="multipart/form-data">
+    <div class="field">
+      <label>작업자</label>
+      <input name="operator" placeholder="작업자 이름" required />
+    </div>
+    <div class="field">
+      <label>엑셀 파일 (.xlsx)</label>
+      <input type="file" name="file" accept=".xlsx" required />
+    </div>
+    <div class="actions">
+      <button class="btn" type="submit">입고 반영</button>
+      <a class="btn secondary" href="/page/excel">엑셀 센터로</a>
+    </div>
+  </form>
+
+  <div class="help">
+    <p><b>필수 컬럼(한글 고정):</b> 창고, 로케이션, 브랜드, 품번, 품명, LOT, 규격, 수량</p>
+    <p>※ DB는 최초 실행 시 자동 생성됩니다.</p>
+  </div>
+</div>
+{% endblock %}
