@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <title>이동 - 상품 선택/도착 스캔</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>재고 이동 (QR)</h2>
+
+    {% if msg %}
+      <div class="notice">{{ msg }}</div>
+    {% endif %}
+
+    <div class="grid">
+      <div class="grid-2">
+        <div>
+          <label>창고</label>
+          <input id="warehouse" value="{{ warehouse }}" readonly>
+        </div>
+        <div>
+          <label>출발 로케이션</label>
+          <input id="from_location" value="{{ from_location }}" readonly>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>작업자</label>
+          <input id="operator" placeholder="예: 홍길동">
+        </div>
+        <div>
+          <label>도착 로케이션 (QR 스캔 또는 입력)</label>
+          <input id="to_location" placeholder="예: D01-01">
+        </div>
+      </div>
+
+      <div id="reader" style="width:100%;max-width:360px;margin:12px auto;"></div>
+
+      <p class="muted">2) 아래 목록에서 이동할 재고를 선택하고 수량을 입력 후 [이동]을 누르세요.</p>
+
+      <form method="post" action="/m/move/do" id="moveForm">
+        <input type="hidden" name="warehouse" value="{{ warehouse }}">
+        <input type="hidden" name="from_location" value="{{ from_location }}">
+        <input type="hidden" name="to_location" id="to_location_hidden">
+        <input type="hidden" name="operator" id="operator_hidden">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>브랜드</th>
+                <th>품번</th>
+                <th>품명</th>
+                <th>LOT</th>
+                <th>규격</th>
+                <th style="text-align:right;">수량</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td><input type="radio" name="pick" value="{{ loop.index0 }}" required></td>
+                <td>{{ r.brand }}</td>
+                <td>{{ r.item_code }}</td>
+                <td>{{ r.item_name }}</td>
+                <td>{{ r.lot }}</td>
+                <td>{{ r.spec }}</td>
+                <td class="qty-cell" style="text-align:right;">{{ r.qty }}</td>
+
+                <input type="hidden" data-idx="{{ loop.index0 }}" data-k="brand" value="{{ r.brand }}">
+                <input type="hidden" data-idx="{{ loop.index0 }}" data-k="item_code" value="{{ r.item_code }}">
+                <input type="hidden" data-idx="{{ loop.index0 }}" data-k="item_name" value="{{ r.item_name }}">
+                <input type="hidden" data-idx="{{ loop.index0 }}" data-k="lot" value="{{ r.lot }}">
+                <input type="hidden" data-idx="{{ loop.index0 }}" data-k="spec" value="{{ r.spec }}">
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label>이동 수량</label>
+            <input type="number" name="qty" step="0.001" value="1" required>
+          </div>
+          <div>
+            <label>비고</label>
+            <input type="text" name="note" placeholder="예: 5단계이동">
+          </div>
+        </div>
+
+        <input type="hidden" name="brand" id="brand_h">
+        <input type="hidden" name="item_code" id="item_code_h">
+        <input type="hidden" name="item_name" id="item_name_h">
+        <input type="hidden" name="lot" id="lot_h">
+        <input type="hidden" name="spec" id="spec_h">
+
+        <div class="actions">
+          <button class="btn" type="submit">이동</button>
+          <a class="btn ghost" href="/m/move/start">다시 스캔</a>
+          <a class="btn ghost" href="/">메인</a>
+        </div>
+      </form>
+  </div>
+</div>
+
+<script>
+function extractLocation(raw){
+  raw = (raw||'').trim();
+  if(raw.includes('location=')){
+    try{ raw = raw.split('location=')[1].split('&')[0]; }catch(e){}
+  }
+  if(raw.includes('type=') || raw.includes('item_code=') || raw.includes('&') || raw.includes('=')) return '';
+  if(raw.length>60) return '';
+  if(!/^[A-Za-z0-9\-_/]+$/.test(raw)) return '';
+  return raw;
+}
+
+const qr = new Html5Qrcode("reader");
+qr.start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 220 },
+  (decodedText)=>{
+    const loc = extractLocation(decodedText);
+    if(loc) document.getElementById('to_location').value = loc;
+  },
+  ()=>{}
+).catch(()=>{});
+
+window.addEventListener("beforeunload", ()=>{
+  try{ qr.stop(); }catch(e){}
+});
+
+document.getElementById('moveForm').addEventListener('submit', (e)=>{
+  const toLoc = extractLocation(document.getElementById('to_location').value);
+  if(!toLoc){
+    e.preventDefault(); alert('도착 로케이션을 입력/스캔하세요.'); return;
+  }
+  document.getElementById('to_location_hidden').value = toLoc;
+
+  document.querySelector('input[name="warehouse"]').value =
+    (document.getElementById('warehouse').value||'').trim();
+
+  const op = (document.getElementById('operator').value||'').trim();
+  document.getElementById('operator_hidden').value = op;
+
+  const pick = document.querySelector('input[name="pick"]:checked');
+  if(!pick){ e.preventDefault(); alert('이동할 품목을 선택하세요.'); return; }
+
+  const idx = pick.value;
+  function get(k){
+    return document.querySelector(`input[data-idx="${idx}"][data-k="${k}"]`).value;
+  }
+
+  const maxQty = parseFloat(
+    document.querySelectorAll('.qty-cell')[idx].innerText
+  );
+  const inputQty = parseFloat(document.querySelector('input[name="qty"]').value);
+  if(inputQty > maxQty){
+    e.preventDefault();
+    alert(`이동 수량이 재고(${maxQty})를 초과합니다.`);
+    return;
+  }
+
+  document.getElementById('brand_h').value = get('brand');
+  document.getElementById('item_code_h').value = get('item_code');
+  document.getElementById('item_name_h').value = get('item_name');
+  document.getElementById('lot_h').value = get('lot');
+  document.getElementById('spec_h').value = get('spec');
+});
+</script>
+</body>
+</html>

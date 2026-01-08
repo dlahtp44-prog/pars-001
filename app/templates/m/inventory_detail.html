@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>재고 상세</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>재고 상세</h2>
+    <p class="small">
+      브랜드: <b>{{brand}}</b> / 품번: <b>{{item_code}}</b> / LOT: <b>{{lot}}</b> / 규격: <b>{{spec}}</b>
+    </p>
+
+    <div class="card">
+      <div class="small">표준 품목 QR 텍스트</div>
+      <pre style="white-space:pre-wrap">{{qr}}</pre>
+    </div>
+
+    <h3 style="margin-top:16px;">현재 재고(로케이션별)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>창고</th>
+          <th>로케이션</th>
+          <th>품명</th>
+          <th>수량</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{r.warehouse}}</td>
+          <td>{{r.location}}</td>
+          <td>{{r.item_name}}</td>
+          <td>{{r.qty}}</td>
+          <td>{{r.note}}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px 0;">모바일 출고</h3>
+      <p class="small">출고는 “창고/로케이션/브랜드/품번/품명/LOT/규격” 기준으로 재고를 차감합니다.</p>
+
+      <form id="outForm">
+        <label>창고</label>
+        <select name="warehouse" required>
+          {% for r in rows %}
+            <option value="{{r.warehouse}}">{{r.warehouse}}</option>
+          {% endfor %}
+        </select>
+
+        <label>로케이션</label>
+        <select name="location" required>
+          {% for r in rows %}
+            <option value="{{r.location}}">{{r.location}} (재고 {{r.qty}})</option>
+          {% endfor %}
+        </select>
+
+        <input type="hidden" name="brand" value="{{brand}}">
+        <input type="hidden" name="item_code" value="{{item_code}}">
+        <input type="hidden" name="item_name" value="{{rows[0].item_name if rows else ''}}">
+        <input type="hidden" name="lot" value="{{lot}}">
+        <input type="hidden" name="spec" value="{{spec}}">
+
+        <label>출고 수량</label>
+        <input name="qty" type="number" min="1" step="1" required>
+
+        <label>비고</label>
+        <input name="note" type="text" placeholder="선택">
+
+        <button type="submit">출고 처리</button>
+      </form>
+
+      <pre id="out" class="card" style="white-space:pre-wrap"></pre>
+    </div>
+
+    <p><a href="/m/qr">← QR</a></p>
+  </div>
+</div>
+
+<script>
+const f=document.getElementById('outForm');
+const out=document.getElementById('out');
+f.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  out.textContent='처리중...';
+  const fd=new FormData(f);
+  const res=await fetch('/api/outbound', {method:'POST', body:fd});
+  out.textContent=await res.text();
+});
+</script>
+</body>
+</html>

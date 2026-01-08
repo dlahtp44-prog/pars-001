@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>{{ title or "QR 스캔" }}</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>{{ title or "QR 스캔" }}</h2>
+    {% if desc %}<p class="small">{{ desc }}</p>{% endif %}
+
+    <div id="reader" style="width:100%"></div>
+
+    <form id="qrForm" method="post" action="{{ action or '/m/qr/submit' }}">
+      <input id="qrtext" name="qrtext" type="hidden" value="">
+
+      {# 🔑 컨텍스트 유지 #}
+      {% if mode %}
+        <input type="hidden" name="mode" value="{{ mode }}">
+      {% endif %}
+      {% if warehouse %}
+        <input type="hidden" name="warehouse" value="{{ warehouse }}">
+      {% endif %}
+
+      {% if hidden %}
+        {% for k, v in hidden.items() %}
+          <input type="hidden" name="{{ k }}" value="{{ v }}">
+        {% endfor %}
+      {% endif %}
+    </form>
+
+    <div class="grid" style="margin-top:12px;">
+      <button type="button" id="toggleBtn">카메라 전환</button>
+      <button type="button" id="restartBtn">다시 시작</button>
+    </div>
+
+    <p class="small" style="margin-top:10px;">
+      스캔이 안되면 <b>브라우저 카메라 권한</b>을 확인하세요. (HTTPS 필요)
+    </p>
+    <p class="small"><a href="/m">← 모바일</a></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const qr = new Html5Qrcode("reader");
+  const qrtextEl = document.getElementById("qrtext");
+  const formEl = document.getElementById("qrForm");
+  const toggleBtn = document.getElementById("toggleBtn");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let cameras = [];
+  let camIndex = 0;
+  let running = false;
+  let submitted = false;   // ✅ 중복 submit 방지
+
+  const config = { fps: 10, qrbox: { width: 260, height: 260 } };
+
+  function submitText(text){
+    if(submitted) return;
+    const cleaned = (text || "").trim();
+    if(!cleaned) return;
+
+    submitted = true;
+    qrtextEl.value = cleaned;
+    formEl.submit();
+  }
+
+  async function stop(){
+    if(running){
+      try{ await qr.stop(); }catch(e){}
+      running = false;
+    }
+  }
+
+  async function startWithFacingMode(){
+    try{
+      await qr.start({ facingMode: { exact: "environment" } }, config, submitText);
+      running = true;
+      return true;
+    }catch(e){
+      try{
+        await qr.start({ facingMode: "environment" }, config, submitText);
+        running = true;
+        return true;
+      }catch(e2){
+        return false;
+      }
+    }
+  }
+
+  async function startWithDeviceId(deviceId){
+    await qr.start({ deviceId: { exact: deviceId } }, config, submitText);
+    running = true;
+  }
+
+  async function start(){
+    submitted = false;
+    await stop();
+
+    const ok = await startWithFacingMode();
+    if(ok) return;
+
+    try{
+      cameras = await Html5Qrcode.getCameras();
+      if(!cameras || cameras.length === 0){
+        alert("카메라를 찾을 수 없습니다.");
+        return;
+      }
+      let idx = cameras.length - 1;
+      for(let i=0;i<cameras.length;i++){
+        const label = (cameras[i].label || "").toLowerCase();
+        if(label.includes("back") || label.includes("rear")){
+          idx = i; break;
+        }
+      }
+      camIndex = idx;
+      await startWithDeviceId(cameras[camIndex].id);
+    }catch(err){
+      alert("카메라 접근 오류: " + err);
+    }
+  }
+
+  toggleBtn.addEventListener("click", async ()=>{
+    try{
+      cameras = cameras && cameras.length ? cameras : await Html5Qrcode.getCameras();
+      if(!cameras || cameras.length < 2){
+        alert("전환할 카메라가 없습니다.");
+        return;
+      }
+      camIndex = (camIndex + 1) % cameras.length;
+      await stop();
+      submitted = false;
+      await startWithDeviceId(cameras[camIndex].id);
+    }catch(e){
+      alert("카메라 전환 실패: " + e);
+    }
+  });
+
+  restartBtn.addEventListener("click", start);
+  window.addEventListener("beforeunload", stop);
+
+  start();
+})();
+</script>
+</body>
+</html>
