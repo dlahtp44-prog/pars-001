@@ -295,33 +295,116 @@ def list_damage_codes(**kwargs):
         conn.close()
 
 
-def add_damage_history(data: Dict[str, Any]) -> None:
+def add_damage_history(
+    *,
+    occurred_at: str,
+    warehouse: str,
+    location: str,
+    brand: str = "",
+    item_code: str,
+    item_name: str,
+    lot: str,
+    spec: str,
+    qty: float,
+    damage_code_id: int,
+    detail: str = "",
+    deduct_inventory: bool = False,
+) -> None:
+    """
+    ✅ CS / 파손 등록 (API 호환 최종판)
+    """
     conn = get_db()
     try:
         cur = conn.cursor()
         now = datetime.now().isoformat(timespec="seconds")
-        cur.execute("""
-            INSERT INTO damage_history
-            (occurred_at, warehouse, location, brand, item_code,
-             item_name, lot, spec, qty, damage_code_id, detail, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            _norm(data.get("occurred_at")) or now[:10],
-            _norm(data["warehouse"]),
-            _norm(data["location"]),
-            _norm(data.get("brand")),
-            _norm(data["item_code"]),
-            _norm(data["item_name"]),
-            _norm(data["lot"]),
-            _norm(data["spec"]),
-            _q3(data["qty"]),
-            int(data["damage_code_id"]),
-            _norm(data.get("detail")),
-            now
-        ))
+
+        occurred_at_n = _norm(occurred_at) or now[:10]
+        warehouse_n = _norm(warehouse)
+        location_n = _norm(location)
+        brand_n = _norm(brand)
+        item_code_n = _norm(item_code)
+        item_name_n = _norm(item_name)
+        lot_n = _norm(lot)
+        spec_n = _norm(spec)
+        qty_n = _q3(qty)
+        detail_n = _norm(detail)
+
+        # 필수값 방어
+        if not (warehouse_n and location_n and item_code_n and item_name_n and lot_n and spec_n):
+            raise ValueError("CS/파손 필수 항목 누락")
+        if qty_n <= 0:
+            raise ValueError("수량은 1 이상이어야 합니다.")
+        if damage_code_id <= 0:
+            raise ValueError("파손 유형이 지정되지 않았습니다.")
+
+        # 파손 이력 저장
+        cur.execute(
+            """
+            INSERT INTO damage_history (
+                occurred_at,
+                warehouse,
+                location,
+                brand,
+                item_code,
+                item_name,
+                lot,
+                spec,
+                qty,
+                damage_code_id,
+                detail,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                occurred_at_n,
+                warehouse_n,
+                location_n,
+                brand_n,
+                item_code_n,
+                item_name_n,
+                lot_n,
+                spec_n,
+                qty_n,
+                damage_code_id,
+                detail_n,
+                now,
+            ),
+        )
+
+        # 재고 차감 옵션
+        if deduct_inventory:
+            cur.execute(
+                """
+                SELECT id, qty FROM inventory
+                WHERE warehouse=? AND location=? AND brand=?
+                  AND item_code=? AND lot=? AND spec=?
+                """,
+                (
+                    warehouse_n,
+                    location_n,
+                    brand_n,
+                    item_code_n,
+                    lot_n,
+                    spec_n,
+                ),
+            )
+            row = cur.fetchone()
+            if not row or float(row["qty"]) < qty_n:
+                raise ValueError("차감할 재고가 부족합니다.")
+
+            remain = _q3(float(row["qty"]) - qty_n)
+            if remain <= 0:
+                cur.execute("DELETE FROM inventory WHERE id=?", (row["id"],))
+            else:
+                cur.execute(
+                    "UPDATE inventory SET qty=?, updated_at=? WHERE id=?",
+                    (remain, now, row["id"]),
+                )
+
         conn.commit()
     finally:
         conn.close()
+
 
 
 def query_damage_history(year=None, month=None, limit=500):
