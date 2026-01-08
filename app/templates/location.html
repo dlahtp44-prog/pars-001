@@ -1,0 +1,62 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<h4 class="fw-bold mb-3">Location 등록</h4>
+
+<div class="card p-3 shadow-sm">
+
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input id="wh" class="form-control" placeholder="창고">
+        </div>
+        <div class="col-md-4">
+            <input id="loc" class="form-control" placeholder="Location">
+        </div>
+    </div>
+
+    <button onclick="addLoc()" class="btn btn-secondary w-100 mt-3">등록</button>
+
+</div>
+
+<hr>
+
+<h5 class="fw-bold">등록된 Location</h5>
+
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>창고</th>
+            <th>Location</th>
+        </tr>
+    </thead>
+    <tbody id="locBody"></tbody>
+</table>
+
+<script>
+async function addLoc(){
+    const params = new URLSearchParams({
+        warehouse: wh.value,
+        location: loc.value
+    });
+
+    await fetch(`/location/add?${params}`, { method:"POST" });
+    alert("등록 완료!");
+    loadLoc();
+}
+
+async function loadLoc(){
+    const res = await fetch("/location/list");
+    const rows = await res.json();
+
+    let html = "";
+    for(const r of rows){
+        html += `<tr><td>${r.warehouse}</td><td>${r.location}</td></tr>`;
+    }
+    locBody.innerHTML = html;
+}
+
+loadLoc();
+</script>
+
+{% endblock %}

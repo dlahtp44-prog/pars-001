@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h4 class="mb-3 fw-bold">입고 처리</h4>
+
+<div class="card p-3 shadow-sm">
+
+    <div class="row g-2">
+        <div class="col-md-4">
+            <label>창고</label>
+            <input id="wh" class="form-control" placeholder="ICHEON">
+        </div>
+
+        <div class="col-md-4">
+            <label>Location</label>
+            <input id="loc" class="form-control" placeholder="A01-01">
+        </div>
+
+        <div class="col-md-4">
+            <label>품번</label>
+            <input id="item" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+            <label>품명</label>
+            <input id="item_name" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+            <label>LOT</label>
+            <input id="lot" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+            <label>수량</label>
+            <input id="qty" type="number" class="form-control" value="1">
+        </div>
+    </div>
+
+    <button onclick="doInbound()" class="btn btn-primary w-100 mt-3">입고 실행</button>
+
+</div>
+
+<script>
+async function doInbound(){
+    const params = new URLSearchParams({
+        warehouse: wh.value,
+        location: loc.value,
+        item_code: item.value,
+        item_name: item_name.value,
+        lot_no: lot.value,
+        qty: qty.value
+    });
+
+    const res = await fetch(`/inbound/?${params}`, { method: "POST" });
+    const data = await res.json();
+    alert("입고 완료! 현재고: " + data.after_qty);
+}
+</script>
+
+{% endblock %}
+
