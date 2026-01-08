@@ -5,25 +5,20 @@ from app.core.paths import STATIC_DIR
 from app.db import init_db
 
 # =====================================================
-# FastAPI APP
+# APP
 # =====================================================
 
 app = FastAPI(
     title="PARS WMS",
-    version="1.6.6-qr"
+    version="1.6.6-stable"
 )
 
 @app.on_event("startup")
-def on_startup():
-    """
-    - DB 초기화 / 마이그레이션
-    - 서비스 기동 시 1회 실행
-    """
+def startup():
     init_db()
 
-
 # =====================================================
-# STATIC FILES
+# STATIC
 # =====================================================
 
 app.mount(
@@ -32,23 +27,22 @@ app.mount(
     name="static"
 )
 
-
 # =====================================================
-# PC PAGE ROUTERS
+# PC PAGES
 # =====================================================
 
-from app.pages.index import router as index_router
-from app.pages.inbound import router as inbound_page_router
-from app.pages.outbound import router as outbound_page_router
-from app.pages.move import router as move_page_router
-from app.pages.inventory import router as inventory_page_router
-from app.pages.history import router as history_page_router
-from app.pages.excel_center import router as excel_center_page_router
-from app.pages.excel_inbound import router as excel_inbound_page_router
-from app.pages.excel_outbound import router as excel_outbound_page_router
-from app.pages.damage import router as damage_page_router
-from app.pages.damage_history import router as damage_history_page_router
-
+from app.pages.index_page import router as index_router
+from app.pages.inbound_page import router as inbound_page_router
+from app.pages.outbound_page import router as outbound_page_router
+from app.pages.move_page import router as move_page_router
+from app.pages.inventory_page import router as inventory_page_router
+from app.pages.history_page import router as history_page_router
+from app.pages.excel_center_page import router as excel_center_page_router
+from app.pages.excel_inbound_page import router as excel_inbound_page_router
+from app.pages.excel_outbound_page import router as excel_outbound_page_router
+from app.pages.damage_page import router as damage_page_router
+from app.pages.damage_history_page import router as damage_history_page_router
+from app.pages.label_page import router as label_page_router
 
 app.include_router(index_router)
 app.include_router(inbound_page_router)
@@ -61,27 +55,26 @@ app.include_router(excel_inbound_page_router)
 app.include_router(excel_outbound_page_router)
 app.include_router(damage_page_router)
 app.include_router(damage_history_page_router)
-
+app.include_router(label_page_router)
 
 # =====================================================
-# MOBILE PAGE ROUTERS
+# MOBILE PAGES
 # =====================================================
 
-from app.pages.mobile_home import router as mobile_home_router
-from app.pages.mobile_qr import router as mobile_qr_router
-from app.pages.mobile_qr_inventory import router as mobile_qr_inventory_router
-from app.pages.mobile_inventory_detail import router as mobile_inventory_detail_router
-from app.pages.mobile_move import router as mobile_move_router
-from app.pages.mobile_cs import router as mobile_cs_router
+from app.pages.mobile.mobile_home_page import router as mobile_home_router
+from app.pages.mobile.mobile_qr_page import router as mobile_qr_router
+from app.pages.mobile.mobile_inventory_detail_page import router as mobile_inventory_router
+from app.pages.mobile.mobile_move_page import router as mobile_move_router
+from app.pages.mobile.mobile_cs_page import router as mobile_cs_router
+
 app.include_router(mobile_home_router)
 app.include_router(mobile_qr_router)
-app.include_router(mobile_qr_inventory_router)
-app.include_router(mobile_inventory_detail_router)
+app.include_router(mobile_inventory_router)
 app.include_router(mobile_move_router)
 app.include_router(mobile_cs_router)
 
 # =====================================================
-# API ROUTERS
+# API
 # =====================================================
 
 from app.routers.api_inbound import router as api_inbound_router
