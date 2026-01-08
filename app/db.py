@@ -66,7 +66,7 @@ def init_db() -> None:
         )
 
         # -----------------------------
-        # HISTORY (입/출/이동)
+        # HISTORY
         # -----------------------------
         cur.execute(
             """
@@ -138,9 +138,7 @@ def init_db() -> None:
             """
         )
 
-        # -----------------------------
-        # DAMAGE CODE SEED (1회)
-        # -----------------------------
+        # DAMAGE CODE SEED
         cur.execute("SELECT COUNT(*) FROM damage_codes")
         if cur.fetchone()[0] == 0:
             cur.executemany(
@@ -407,6 +405,50 @@ def add_history(
             ),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def query_history(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    day: Optional[int] = None,
+    limit: int = 500,
+) -> List[Dict[str, Any]]:
+    """
+    ✅ history 페이지 전용 조회 (location 컬럼 제공)
+    """
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        where, params = [], []
+
+        if year:
+            pat = f"{int(year):04d}"
+            if month:
+                pat += f"-{int(month):02d}"
+                if day:
+                    pat += f"-{int(day):02d}"
+            where.append("created_at LIKE ?")
+            params.append(f"{pat}%")
+
+        sql = """
+            SELECT
+                h.*,
+                CASE
+                    WHEN h.type='입고' THEN h.to_location
+                    WHEN h.type='출고' THEN h.from_location
+                    ELSE h.from_location
+                END AS location
+            FROM history h
+        """
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY h.created_at DESC, h.id DESC LIMIT ?"
+        params.append(int(limit))
+
+        cur.execute(sql, params)
+        return [dict(r) for r in cur.fetchall()]
     finally:
         conn.close()
 
