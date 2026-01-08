@@ -17,8 +17,8 @@ app = FastAPI(
 @app.on_event("startup")
 def on_startup():
     """
+    서비스 기동 시 1회 실행
     - DB 초기화 / 마이그레이션
-    - 서비스 기동 시 1회 실행
     """
     init_db()
 
@@ -38,18 +38,17 @@ app.mount(
 # PC PAGE ROUTERS
 # =====================================================
 
-from app.pages.index import router as index_router
-from app.pages.inbound import router as inbound_page_router
-from app.pages.outbound import router as outbound_page_router
-from app.pages.move import router as move_page_router
-from app.pages.inventory import router as inventory_page_router
-from app.pages.history import router as history_page_router
-from app.pages.excel_center import router as excel_center_page_router
-from app.pages.excel_inbound import router as excel_inbound_page_router
-from app.pages.excel_outbound import router as excel_outbound_page_router
-from app.pages.damage import router as damage_page_router
-from app.pages.damage_history import router as damage_history_page_router
-from app.pages.label import router as label_page_router  # 라벨 출력
+from app.pages.index_page import router as index_router
+from app.pages.inbound_page import router as inbound_page_router
+from app.pages.outbound_page import router as outbound_page_router
+from app.pages.move_page import router as move_page_router
+from app.pages.inventory_page import router as inventory_page_router
+from app.pages.history_page import router as history_page_router
+from app.pages.location_page import router as location_page_router
+from app.pages.opening_page import router as opening_page_router
+from app.pages.admin_page import router as admin_page_router
+from app.pages.qr_page import router as qr_page_router
+from app.pages.test_page import router as test_page_router
 
 app.include_router(index_router)
 app.include_router(inbound_page_router)
@@ -57,12 +56,11 @@ app.include_router(outbound_page_router)
 app.include_router(move_page_router)
 app.include_router(inventory_page_router)
 app.include_router(history_page_router)
-app.include_router(excel_center_page_router)
-app.include_router(excel_inbound_page_router)
-app.include_router(excel_outbound_page_router)
-app.include_router(damage_page_router)
-app.include_router(damage_history_page_router)
-app.include_router(label_page_router)
+app.include_router(location_page_router)
+app.include_router(opening_page_router)
+app.include_router(admin_page_router)
+app.include_router(qr_page_router)
+app.include_router(test_page_router)
 
 
 # =====================================================
