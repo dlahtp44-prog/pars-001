@@ -1,10 +1,12 @@
 from pathlib import Path
 
 # app/core/paths.py
-# 프로젝트 내 경로 표준화 (Railway/로컬 공통)
+# 프로젝트 내 경로 표준화 (Railway / Docker / 로컬 공통)
 
-# .../app/core/paths.py -> parents[1] == app/
-BASE_DIR = Path(__file__).resolve().parents[1]
+# 현재 파일 위치:
+# /app/app/core/paths.py
+# parents[2] => /app/app
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
