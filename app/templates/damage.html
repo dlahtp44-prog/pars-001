@@ -3,6 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>CS / 파손 등록</title>
+    <style>
+        .row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+        .row input {
+            width: 120px;
+        }
+        .row .qty {
+            width: 60px;
+        }
+        .header span {
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
@@ -16,36 +35,37 @@
            required>
     <br><br>
 
-<!-- 창고 -->
-<input type="text" name="warehouse" required>
+    <!-- ✅ 컬럼명 -->
+    <div class="row header">
+        <span style="width:120px;">창고</span>
+        <span style="width:120px;">로케이션</span>
+        <span style="width:120px;">브랜드</span>
+        <span style="width:120px;">품번</span>
+        <span style="width:160px;">품명</span>
+        <span style="width:80px;">LOT</span>
+        <span style="width:100px;">규격</span>
+        <span style="width:60px;">수량</span>
+        <span style="width:120px;"></span>
+    </div>
 
-<!-- 로케이션 -->
-<input type="text" name="location" required>
+    <!-- ✅ 입력 -->
+    <div class="row">
+        <input name="warehouse" required>
+        <input name="location" required>
+        <input name="brand">
+        <input name="item_code" required>
+        <input name="item_name" style="width:160px;" required>
+        <input name="lot" style="width:80px;" required>
+        <input name="spec" style="width:100px;" required>
+        <input name="qty" type="number" min="1" class="qty" required>
 
-<!-- 브랜드 -->
-<input type="text" name="brand">
+        <label style="font-size:12px;">
+            <input type="checkbox" name="deduct_inventory" value="1">
+            재고차감
+        </label>
+    </div>
 
-<!-- 품번 -->
-<input type="text" name="item_code" required>
-
-<!-- 품명 -->
-<input type="text" name="item_name" required>
-
-<!-- LOT -->
-<input type="text" name="lot" required>
-
-<!-- 규격 -->
-<input type="text" name="spec" required>
-
-<!-- 수량 -->
-<input type="number" name="qty" min="1" required>
-
-
-    <label>
-        <input type="checkbox" name="deduct_inventory" value="1">
-        재고에서 수량 차감
-    </label>
-    <br><br>
+    <br>
 
     <label>파손 유형</label><br>
     <select name="damage_code_id" required>
@@ -56,16 +76,23 @@
             </option>
         {% endfor %}
     </select>
+
     <br><br>
 
     <label>상세 내용</label><br>
-    <textarea name="detail" rows="4" cols="40"
+    <textarea name="detail" rows="4" cols="60"
               placeholder="파손 상황을 간단히 입력하세요"></textarea>
+
     <br><br>
 
     <button type="submit">등록</button>
-
 </form>
+
+<div style="margin-top:20px;">
+    <a href="/">
+        <button type="button">메인으로 돌아가기</button>
+    </a>
+</div>
 
 </body>
 </html>
