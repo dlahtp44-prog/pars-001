@@ -7,9 +7,18 @@
 </head>
 <body>
 
-{% for location in locations %}
+{% for item in locations %}
   <div class="label large" style="page-break-inside: avoid;">
-    {{ location }}
+    
+    <div class="location-text">
+      {{ item.location }}
+    </div>
+
+    <img
+      src="data:image/png;base64,{{ item.qr_base64 }}"
+      class="location-qr"
+    >
+
   </div>
 {% endfor %}
 
