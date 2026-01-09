@@ -30,6 +30,7 @@ from app.pages.excel_inbound import router as excel_inbound_page_router
 from app.pages.excel_outbound import router as excel_outbound_page_router
 from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
+from app.pages.labels import router as labels_page_router
 
 app.include_router(index_router)
 app.include_router(inbound_page_router)
@@ -42,6 +43,7 @@ app.include_router(excel_inbound_page_router)
 app.include_router(excel_outbound_page_router)
 app.include_router(damage_page_router)
 app.include_router(damage_history_page_router)
+app.include_router(labels_page_router)
 
 # =========================
 # MOBILE
