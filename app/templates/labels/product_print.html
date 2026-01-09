@@ -8,12 +8,24 @@
 <body>
 
 {% for item in items %}
-<div class="label">
-  <div class="brand">{{ item.brand }}</div>
-  <div class="code">{{ item.code }}</div>
-  <div class="name">{{ item.name }}</div>
-  <div class="meta">LOT: {{ item.lot }}</div>
-  <div class="meta">{{ item.spec }}</div>
+<div class="label product">
+
+  <div class="left">
+    <div class="brand">{{ item.brand }}</div>
+    <div class="code">{{ item.code }}</div>
+    <div class="name">{{ item.name }}</div>
+    <div class="meta">LOT: {{ item.lot }}</div>
+    <div class="meta">{{ item.spec }}</div>
+  </div>
+
+  <div class="right">
+    <img
+      src="data:image/png;base64,{{ item.qr_base64 }}"
+      class="product-qr"
+      alt="Product QR"
+    >
+  </div>
+
 </div>
 {% endfor %}
 
