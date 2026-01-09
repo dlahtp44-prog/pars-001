@@ -5,93 +5,57 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-               Roboto, "Apple SD Gothic Neo", "Noto Sans KR",
+  font-family: -apple-system, BlinkMacSystemFont,
+               "Apple SD Gothic Neo", "Noto Sans KR",
                "Malgun Gothic", Arial, sans-serif;
 }
 
-/* =========================
-   공통 라벨 박스
-========================= */
-.label {
+/* ===== A4 전체 ===== */
+.sheet {
+  width: 210mm;
+  height: 297mm;
+  display: flex;
+  flex-wrap: wrap;
   box-sizing: border-box;
-  border: 1px solid #000;
 }
 
-/* =========================
-   제품 라벨 (LS-3108)
-========================= */
+/* ===== 라벨 1칸 (99.1 × 38.1) ===== */
 .label {
   width: 99.1mm;
   height: 38.1mm;
-  padding: 4mm;
-  font-size: 10pt;
-  display: inline-block;
-}
-
-.label .brand {
-  font-weight: bold;
-  font-size: 11pt;
-}
-
-.label .code {
-  font-size: 9pt;
-  /* =========================
-   제품 라벨 QR 레이아웃
-========================= */
-.label.product {
+  box-sizing: border-box;
+  border: 1px solid #000;
+  padding: 3mm;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 3mm;
 }
 
-.label.product .left {
-  width: 65%;
-}
-
-.label.product .right {
-  width: 30%;
-  text-align: center;
-}
-
-.product-qr {
-  width: 28mm;
-  height: 28mm;
-}
-
-}
-
-.label .name {
-  font-size: 9pt;
+/* ===== 좌측 텍스트 ===== */
+.label-text {
+  flex: 1;
+  font-size: 7.5pt;
   line-height: 1.2;
 }
 
-.label .meta {
-  font-size: 8pt;
-}
-
-/* =========================
-   로케이션 라벨 (LS-3118)
-========================= */
-.label.large {
-  width: 99.1mm;
-  height: 140mm;
-  padding: 8mm 6mm;
-  text-align: center;
-}
-
-/* 로케이션 코드 텍스트 */
-.location-text {
-  margin-top: 18mm;
-  font-size: 28pt;
+.label-text .brand {
   font-weight: bold;
-  letter-spacing: 1px;
+  font-size: 8.5pt;
 }
 
-/* QR 코드 */
-.location-qr {
-  display: block;
-  margin: 10mm auto 0 auto;
-  width: 60mm;
-  height: 60mm;
+.label-text .code {
+  font-size: 7pt;
+}
+
+.label-text .name {
+  font-size: 7pt;
+}
+
+.label-text .meta {
+  font-size: 6.5pt;
+}
+
+/* ===== 우측 QR ===== */
+.label-qr {
+  width: 18mm;
+  height: 18mm;
 }
