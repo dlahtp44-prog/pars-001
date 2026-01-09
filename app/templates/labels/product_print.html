@@ -21,11 +21,17 @@
       <div class="meta">{{ item.spec }}</div>
     </div>
 
-    <img class="label-qr"
-         src="data:image/png;base64,{{ item.qr_base64 }}">
+    <img
+      class="label-qr"
+      src="data:image/png;base64,{{ item.qr_base64 }}"
+    >
   </div>
   {% endfor %}
 </div>
+
+<script>
+  window.print();
+</script>
 
 </body>
 </html>
