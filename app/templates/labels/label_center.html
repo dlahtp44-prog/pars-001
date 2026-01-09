@@ -19,11 +19,21 @@
 
 <hr>
 
-<h3>로케이션 라벨 출력</h3>
-<form action="/page/labels/location" method="get">
+<h3>📍 로케이션 라벨 출력 (엑셀)</h3>
+
+<form action="/api/labels/location/excel" method="post" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".xlsx" required>
+  <button type="submit">엑셀 업로드 → 라벨 출력</button>
+</form>
+
+<hr>
+
+<h3>📍 로케이션 라벨 출력 (단건)</h3>
+<form action="/page/labels/location" method="get" target="_blank">
   <input type="text" name="location" placeholder="B01-01-02-A" required>
   <button type="submit">로케이션 라벨 출력</button>
 </form>
+
 
 </body>
 </html>
