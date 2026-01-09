@@ -7,15 +7,16 @@
 </head>
 <body>
 
-<div class="sheet">
+<div class="sheet-3118">
   {% for item in locations %}
-    <div class="label-location" style="page-break-inside: avoid;">
-      <div class="location-text">{{ item.location }}</div>
+    <div class="label-3118">
+      <div class="location-text">
+        {{ item.location }}
+      </div>
 
       <img
-        src="data:image/png;base64,{{ item.qr_base64 }}"
         class="location-qr"
-        alt="Location QR"
+        src="data:image/png;base64,{{ item.qr_base64 }}"
       >
     </div>
   {% endfor %}
