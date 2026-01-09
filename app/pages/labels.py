@@ -12,9 +12,34 @@ router = APIRouter(
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+# =========================
+# 라벨 센터 메인
+# =========================
 @router.get("", response_class=HTMLResponse)
 def labels_index(request: Request):
     return templates.TemplateResponse(
         "labels/index.html",
+        {"request": request}
+    )
+
+
+# =========================
+# 제품 라벨 페이지
+# =========================
+@router.get("/product", response_class=HTMLResponse)
+def labels_product(request: Request):
+    return templates.TemplateResponse(
+        "labels/product.html",
+        {"request": request}
+    )
+
+
+# =========================
+# 로케이션 라벨 페이지
+# =========================
+@router.get("/location", response_class=HTMLResponse)
+def labels_location(request: Request):
+    return templates.TemplateResponse(
+        "labels/location.html",
         {"request": request}
     )
