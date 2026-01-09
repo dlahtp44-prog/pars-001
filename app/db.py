@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.paths import DB_PATH
 
+
 # =====================================================
 # DB CONNECTION & UTILS
 # =====================================================
@@ -35,7 +36,9 @@ def init_db() -> None:
     try:
         cur = conn.cursor()
 
+        # =====================
         # INVENTORY
+        # =====================
         cur.execute("""
             CREATE TABLE IF NOT EXISTS inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +59,9 @@ def init_db() -> None:
             ON inventory (warehouse, location, brand, item_code, lot, spec)
         """)
 
+        # =====================
         # HISTORY
+        # =====================
         cur.execute("""
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,9 +80,13 @@ def init_db() -> None:
                 created_at TEXT NOT NULL
             )
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)")
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
+        )
 
+        # =====================
         # DAMAGE CODES
+        # =====================
         cur.execute("""
             CREATE TABLE IF NOT EXISTS damage_codes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,7 +102,9 @@ def init_db() -> None:
             ON damage_codes (category, type, situation)
         """)
 
+        # =====================
         # DAMAGE HISTORY
+        # =====================
         cur.execute("""
             CREATE TABLE IF NOT EXISTS damage_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,21 +124,64 @@ def init_db() -> None:
             )
         """)
 
-        # DAMAGE CODE SEED
-        cur.execute("SELECT COUNT(*) FROM damage_codes")
-        if cur.fetchone()[0] == 0:
-            cur.executemany("""
-                INSERT INTO damage_codes (category, type, situation, description)
-                VALUES (?, ?, ?, ?)
-            """, [
-                ("물류", "수작업", "이동", "수작업 이동 중 발생"),
-                ("물류", "수작업", "낙하", "수작업 중 낙하"),
-                ("물류", "지게차", "충격", "지게차 충돌"),
-                ("운송", "하차", "부주의", "하차 중 파손"),
-                ("가공", "업체", "불량", "가공 불량"),
-            ])
+        # =====================
+        # DAMAGE CODE SEED (🔥 안정판)
+        # =====================
+        cur.execute("DELETE FROM damage_codes")
+
+        damage_seed = [
+            # 물류
+            ("물류", "수작업", "이동", "수작업 이동 중 파손"),
+            ("물류", "수작업", "낙하", "수작업 중 낙하"),
+            ("물류", "수작업", "충격", "수작업 중 외부 충격"),
+            ("물류", "지게차", "이동", "지게차 이동 중 충돌"),
+            ("물류", "지게차", "낙하", "지게차 작업 중 낙하"),
+            ("물류", "지게차", "충격", "지게차 충돌"),
+            ("물류", "보관", "적재 기준 미준수", "적재 기준 위반"),
+            ("물류", "보관", "허용 하중 초과", "허용 하중 초과"),
+            ("물류", "보관", "장기 적재", "장기 보관 중 파손"),
+            ("물류", "기타", "원인 불명", "원인 미확인"),
+
+            # 사옥
+            ("사옥", "수작업", "이동", "사옥 내 이동 중 파손"),
+            ("사옥", "수작업", "낙하", "사옥 내 낙하"),
+            ("사옥", "수작업", "충격", "사옥 내 충격"),
+            ("사옥", "보관", "적재 기준 미준수", "사옥 보관 중 적재 불량"),
+
+            # 운송
+            ("운송", "하차", "부주의", "하차 작업 중 부주의"),
+            ("운송", "하차", "충격", "하차 중 충격"),
+            ("운송", "운송", "사고", "운송 중 사고"),
+            ("운송", "운송", "적재 불량", "차량 적재 불량"),
+
+            # 하차지
+            ("하차지", "수작업", "이동", "하차지 이동 중 파손"),
+            ("하차지", "수작업", "낙하", "하차지 낙하"),
+            ("하차지", "지게차", "충격", "하차지 지게차 충돌"),
+            ("하차지", "보관", "적재 기준 미준수", "하차지 보관 중 적재 불량"),
+            ("하차지", "기타", "원인 불명", "하차지 원인 미확인"),
+
+            # 가공공장
+            ("가공공장", "제품", "재단 불량", "재단 작업 중 불량"),
+            ("가공공장", "제품", "제품 파손", "가공 중 제품 파손"),
+            ("가공공장", "제품", "색상 불량", "색상 불량"),
+            ("가공공장", "기타", "재단 불량", "기타 재단 불량"),
+
+            # 원자재
+            ("원자재", "생산", "출격 불량", "생산 공정 불량"),
+            ("원자재", "생산", "적재 불량", "원자재 적재 불량"),
+
+            # 부상
+            ("부상", "지게차", "충격", "지게차 작업 중 부상"),
+        ]
+
+        cur.executemany("""
+            INSERT INTO damage_codes (category, type, situation, description)
+            VALUES (?, ?, ?, ?)
+        """, damage_seed)
 
         conn.commit()
+
     finally:
         conn.close()
 
