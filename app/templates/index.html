@@ -5,39 +5,104 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="/static/app.css"/>
   <title>PARS WMS</title>
+
+  <style>
+    /* =========================
+       기본 레이아웃 보강
+    ========================= */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .menu-grid .card {
+      text-align: center;
+      font-size: 15px;
+      padding: 14px 16px;
+      border-radius: 14px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    /* =========================
+       📱 모바일 최적화
+    ========================= */
+    @media (max-width: 768px) {
+
+      h1 {
+        font-size: 22px;
+        text-align: center;
+      }
+
+      /* 메뉴를 1열로 */
+      .menu-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      /* 카드 터치 영역 확대 */
+      .menu-grid .card {
+        font-size: 17px;
+        padding: 18px 20px;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* 강조 버튼 더 잘 보이게 */
+      .menu-grid .highlight {
+        border-width: 2px;
+        font-weight: 600;
+      }
+
+      /* 하단 설명 가독성 */
+      .small {
+        font-size: 13px;
+        line-height: 1.6;
+        margin-top: 18px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
 <div class="container">
   <div class="card">
     <h1>PARS WMS v1.6.4-stable</h1>
 
-<div class="menu-grid">
+    <div class="menu-grid">
 
-  <a class="card" href="/page/inbound">입고</a>
-  <a class="card" href="/page/outbound">출고</a>
-  <a class="card" href="/page/move">이동</a>
-  <a class="card" href="/page/inventory">재고조회</a>
-  <a class="card" href="/page/history">이력</a>
-  <a class="card" href="/page/excel">엑셀 센터</a>
+      <a class="card" href="/page/inbound">입고</a>
+      <a class="card" href="/page/outbound">출고</a>
+      <a class="card" href="/page/move">이동</a>
+      <a class="card" href="/page/inventory">재고조회</a>
+      <a class="card" href="/page/history">이력</a>
+      <a class="card" href="/page/excel">엑셀 센터</a>
 
-  <!-- ✅ 라벨 출력 버튼 -->
-  <a class="card" href="/page/labels">
-    🏷️ 라벨 출력
-  </a>
+      <!-- ✅ 라벨 출력 -->
+      <a class="card" href="/page/labels">
+        🏷️ 라벨 출력
+      </a>
 
-  <a class="card highlight" href="/damage">
-    CS / 파손 등록
-  </a>
+      <a class="card highlight" href="/damage">
+        CS / 파손 등록
+      </a>
 
-  <a class="card" href="/page/damage-history">
-    CS 이력
-  </a>
+      <a class="card" href="/page/damage-history">
+        CS 이력
+      </a>
 
-  <a class="card" href="/m">모바일</a>
+      <a class="card" href="/m">
+        모바일
+      </a>
 
-</div>
-
+    </div>
 
     <p class="small">
       ✅ 재고/이력: <b>검색 + 엑셀 다운로드</b><br/>
