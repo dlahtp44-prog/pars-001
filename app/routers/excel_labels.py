@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from app.core.paths import TEMPLATES_DIR
 import openpyxl
 
 router = APIRouter(
@@ -8,7 +9,7 @@ router = APIRouter(
     tags=["라벨 API"]
 )
 
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.post("/product", response_class=HTMLResponse)
