@@ -136,26 +136,13 @@ def init_db() -> None:
 # INVENTORY HELPERS
 # =====================================================
 
-def _find_inventory_candidates(warehouse, location, item_code, lot, spec):
-    conn = get_db()
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT * FROM inventory
-            WHERE warehouse=? AND location=? AND item_code=? AND lot=? AND spec=? AND qty > 0
-        """, (_norm(warehouse), _norm(location), _norm(item_code), _norm(lot), _norm(spec)))
-        return cur.fetchall()
-    finally:
-        conn.close()
-
-
 def resolve_inventory_brand_and_name(
     warehouse, location, item_code, lot, spec, brand=""
 ) -> Tuple[str, str]:
-    brand_n = _norm(brand)
     conn = get_db()
     try:
         cur = conn.cursor()
+        brand_n = _norm(brand)
 
         if brand_n:
             cur.execute("""
@@ -203,7 +190,7 @@ def query_inventory(
         if location:
             where.append("location LIKE ?"); params.append(f"%{_norm(location)}%")
         if brand:
-            where.append("brand LIKE ?"); params.append(f"%{_norm(brand)}%")
+            where.append("brand = ?"); params.append(_norm(brand))  # ✅ 정확 일치
         if item_code:
             where.append("item_code LIKE ?"); params.append(f"%{_norm(item_code)}%")
         if lot:
@@ -217,6 +204,51 @@ def query_inventory(
 
         cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def upsert_inventory(
+    warehouse, location, brand, item_code, item_name,
+    lot, spec, qty_delta, note=""
+) -> bool:
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        now = datetime.now().isoformat(timespec="seconds")
+        delta = _q3(qty_delta)
+
+        cur.execute("""
+            SELECT id, qty FROM inventory
+            WHERE warehouse=? AND location=? AND brand=?
+              AND item_code=? AND lot=? AND spec=?
+        """, (_norm(warehouse), _norm(location), _norm(brand),
+              _norm(item_code), _norm(lot), _norm(spec)))
+        row = cur.fetchone()
+
+        if row:
+            new_qty = _q3(float(row["qty"]) + delta)
+            if new_qty <= 0:
+                cur.execute("DELETE FROM inventory WHERE id=?", (row["id"],))
+            else:
+                cur.execute("""
+                    UPDATE inventory
+                    SET qty=?, note=?, updated_at=?
+                    WHERE id=?
+                """, (new_qty, _norm(note), now, row["id"]))
+        else:
+            if delta <= 0:
+                return False
+            cur.execute("""
+                INSERT INTO inventory
+                (warehouse, location, brand, item_code, item_name, lot, spec, qty, note, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (_norm(warehouse), _norm(location), _norm(brand),
+                  _norm(item_code), _norm(item_name),
+                  _norm(lot), _norm(spec), delta, _norm(note), now))
+
+        conn.commit()
+        return True
     finally:
         conn.close()
 
@@ -269,14 +301,18 @@ def query_history(year=None, month=None, day=None, limit=500):
         cur = conn.cursor()
         where, params = [], []
 
-        if year:
-            pat = f"{int(year):04d}"
-            if month:
-                pat += f"-{int(month):02d}"
-                if day:
-                    pat += f"-{int(day):02d}"
+        if year and month:
+            pat = f"{int(year):04d}-{int(month):02d}"
+            if day:
+                pat += f"-{int(day):02d}"
             where.append("created_at LIKE ?")
             params.append(f"{pat}%")
+        elif year:
+            where.append("created_at LIKE ?")
+            params.append(f"{int(year):04d}%")
+        elif month:
+            where.append("created_at LIKE ?")
+            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT h.*,
@@ -370,12 +406,15 @@ def query_damage_history(year=None, month=None, limit=500):
         cur = conn.cursor()
         where, params = [], []
 
-        if year:
-            pat = f"{int(year):04d}"
-            if month:
-                pat += f"-{int(month):02d}"
+        if year and month:
             where.append("dh.occurred_at LIKE ?")
-            params.append(f"{pat}%")
+            params.append(f"{int(year):04d}-{int(month):02d}%")
+        elif year:
+            where.append("dh.occurred_at LIKE ?")
+            params.append(f"{int(year):04d}%")
+        elif month:
+            where.append("dh.occurred_at LIKE ?")
+            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT dh.*, dc.category, dc.type, dc.situation
@@ -399,12 +438,15 @@ def query_damage_summary_by_category(year=None, month=None):
         cur = conn.cursor()
         where, params = [], []
 
-        if year:
-            pat = f"{int(year):04d}"
-            if month:
-                pat += f"-{int(month):02d}"
+        if year and month:
             where.append("dh.occurred_at LIKE ?")
-            params.append(f"{pat}%")
+            params.append(f"{int(year):04d}-{int(month):02d}%")
+        elif year:
+            where.append("dh.occurred_at LIKE ?")
+            params.append(f"{int(year):04d}%")
+        elif month:
+            where.append("dh.occurred_at LIKE ?")
+            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT dc.category, COUNT(*) AS cnt
