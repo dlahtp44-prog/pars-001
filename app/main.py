@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.paths import STATIC_DIR
 from app.db import init_db
@@ -9,17 +10,31 @@ app = FastAPI(
     version="1.6.6-qr"
 )
 
+# =========================
+# STARTUP
+# =========================
 @app.on_event("startup")
 def on_startup():
     init_db()
 
+# =========================
+# SESSION (로그인용)
+# =========================
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="pars-wms-secret-key",  # 내부용, 간단히 고정
+)
+
+# =========================
 # STATIC
+# =========================
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # =========================
 # PC PAGES
 # =========================
 from app.pages.index import router as index_router
+from app.pages.login import router as login_router
 from app.pages.inbound import router as inbound_page_router
 from app.pages.outbound import router as outbound_page_router
 from app.pages.move import router as move_page_router
@@ -32,6 +47,7 @@ from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
 
+app.include_router(login_router)      # ✅ 로그인 먼저
 app.include_router(index_router)
 app.include_router(inbound_page_router)
 app.include_router(outbound_page_router)
