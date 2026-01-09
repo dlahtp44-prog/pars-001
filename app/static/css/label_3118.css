@@ -1,0 +1,24 @@
+@media print {
+  body { margin: 0; }
+}
+
+.label-location {
+  width: 99.1mm;
+  height: 140mm;
+  border: 1px solid #000;
+  box-sizing: border-box;
+  padding: 8mm;
+  text-align: center;
+  page-break-after: always;
+}
+
+.location-text {
+  font-size: 28pt;
+  font-weight: bold;
+  margin-bottom: 12mm;
+}
+
+.location-qr {
+  width: 70mm;
+  height: 70mm;
+}
