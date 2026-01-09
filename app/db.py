@@ -190,7 +190,7 @@ def query_inventory(
         if location:
             where.append("location LIKE ?"); params.append(f"%{_norm(location)}%")
         if brand:
-            where.append("brand = ?"); params.append(_norm(brand))  # ✅ 정확 일치
+            where.append("brand = ?"); params.append(_norm(brand))
         if item_code:
             where.append("item_code LIKE ?"); params.append(f"%{_norm(item_code)}%")
         if lot:
@@ -310,9 +310,6 @@ def query_history(year=None, month=None, day=None, limit=500):
         elif year:
             where.append("created_at LIKE ?")
             params.append(f"{int(year):04d}%")
-        elif month:
-            where.append("created_at LIKE ?")
-            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT h.*,
@@ -337,11 +334,33 @@ def query_history(year=None, month=None, day=None, limit=500):
 # DAMAGE / CS
 # =====================================================
 
-def list_damage_codes():
+def list_damage_codes(
+    *,
+    category: str = "",
+    type: str = "",
+    situation: str = "",
+    active_only: bool = True,
+):
     conn = get_db()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM damage_codes WHERE is_active=1")
+        where, params = [], []
+
+        if active_only:
+            where.append("is_active=1")
+        if category:
+            where.append("category=?"); params.append(_norm(category))
+        if type:
+            where.append("type=?"); params.append(_norm(type))
+        if situation:
+            where.append("situation=?"); params.append(_norm(situation))
+
+        sql = "SELECT * FROM damage_codes"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY category, type, situation"
+
+        cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
     finally:
         conn.close()
@@ -412,9 +431,6 @@ def query_damage_history(year=None, month=None, limit=500):
         elif year:
             where.append("dh.occurred_at LIKE ?")
             params.append(f"{int(year):04d}%")
-        elif month:
-            where.append("dh.occurred_at LIKE ?")
-            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT dh.*, dc.category, dc.type, dc.situation
@@ -444,9 +460,6 @@ def query_damage_summary_by_category(year=None, month=None):
         elif year:
             where.append("dh.occurred_at LIKE ?")
             params.append(f"{int(year):04d}%")
-        elif month:
-            where.append("dh.occurred_at LIKE ?")
-            params.append(f"%-{int(month):02d}%")
 
         sql = """
             SELECT dc.category, COUNT(*) AS cnt
