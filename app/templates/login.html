@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PARS WMS 로그인</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    body {
+      background: #020617;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 360px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <h1>PARS WMS</h1>
+
+  <form method="post">
+    <input name="username" placeholder="아이디" required />
+    <input name="password" type="password" placeholder="비밀번호" required />
+    <button type="submit">로그인</button>
+  </form>
+</div>
+
+</body>
+</html>
