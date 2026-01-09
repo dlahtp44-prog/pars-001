@@ -13,10 +13,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.get("", response_class=HTMLResponse)
-def label_home(request: Request):
-    """
-    라벨 출력 메인 페이지
-    """
+def labels_index(request: Request):
     return templates.TemplateResponse(
         "labels/index.html",
         {"request": request}
