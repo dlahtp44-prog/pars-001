@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>제품 라벨 출력</title>
-    <link rel="stylesheet" href="/static/css/label_print.css">
+  <meta charset="UTF-8">
+  <title>제품 라벨 출력</title>
+  <link rel="stylesheet" href="/static/css/label_print.css">
 </head>
 <body>
+
 {% for item in items %}
 <div class="label">
-    <div class="brand">{{ item.brand }}</div>
-    <div class="code">{{ item.code }}</div>
-    <div class="name">{{ item.name }}</div>
-    <div class="meta">
-        LOT: {{ item.lot }}<br>
-        {{ item.spec }}
-    </div>
+  <div class="brand">{{ item.brand }}</div>
+  <div class="code">{{ item.code }}</div>
+  <div class="name">{{ item.name }}</div>
+  <div class="meta">LOT: {{ item.lot }}</div>
+  <div class="meta">{{ item.spec }}</div>
 </div>
 {% endfor %}
+
 </body>
 </html>
