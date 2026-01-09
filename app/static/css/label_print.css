@@ -10,11 +10,20 @@ body {
                "Malgun Gothic", Arial, sans-serif;
 }
 
+/* =========================
+   공통 라벨 박스
+========================= */
+.label {
+  box-sizing: border-box;
+  border: 1px solid #000;
+}
+
+/* =========================
+   제품 라벨 (LS-3108)
+========================= */
 .label {
   width: 99.1mm;
   height: 38.1mm;
-  box-sizing: border-box;
-  border: 1px solid #000;
   padding: 4mm;
   font-size: 10pt;
   display: inline-block;
@@ -38,11 +47,28 @@ body {
   font-size: 8pt;
 }
 
+/* =========================
+   로케이션 라벨 (LS-3118)
+========================= */
 .label.large {
   width: 99.1mm;
   height: 140mm;
+  padding: 8mm 6mm;
+  text-align: center;
+}
+
+/* 로케이션 코드 텍스트 */
+.location-text {
+  margin-top: 18mm;
   font-size: 28pt;
   font-weight: bold;
-  text-align: center;
-  line-height: 140mm;
+  letter-spacing: 1px;
+}
+
+/* QR 코드 */
+.location-qr {
+  display: block;
+  margin: 10mm auto 0 auto;
+  width: 60mm;
+  height: 60mm;
 }
