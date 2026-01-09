@@ -27,6 +27,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   box-sizing: border-box;
+  align-content: flex-start;
 }
 
 /* =================================================
@@ -34,8 +35,8 @@ body {
    ================================================= */
 .label {
   box-sizing: border-box;
-  border: 1px solid #000;   /* 테스트용 */
   page-break-inside: avoid;
+  border: 1px solid #000;   /* ⚠ 테스트 후 제거 가능 */
 }
 
 /* =================================================
@@ -76,10 +77,12 @@ body {
   font-size: 6.5pt;
 }
 
-/* ── QR */
+/* ── QR (제품용: 높이 기준 자동 비율) */
 .ls3108 .label-qr {
-  width: 32mm;
-  height: 32mm;
+  height: 100%;
+  max-height: 32mm;       /* 패딩 제외 안전값 */
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -90,6 +93,7 @@ body {
 .label.ls3118 {
   width: 99.1mm;
   height: 140mm;
+  padding: 6mm;
 
   display: flex;
   flex-direction: column;
@@ -102,10 +106,13 @@ body {
   font-size: 28pt;
   font-weight: bold;
   margin-bottom: 8mm;
+  text-align: center;
+  word-break: keep-all;
 }
 
-/* ── QR */
+/* ── QR (로케이션용: 고정 대형) */
 .ls3118 .location-qr {
   width: 60mm;
   height: 60mm;
+  object-fit: contain;
 }
