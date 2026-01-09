@@ -13,6 +13,7 @@ app = FastAPI(
     version="1.6.6-qr"
 )
 
+
 @app.on_event("startup")
 def on_startup():
     """
@@ -49,7 +50,7 @@ from app.pages.excel_outbound import router as excel_outbound_page_router
 from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 
-# ✅ 라벨 페이지 추가
+# ✅ 라벨 출력 페이지
 from app.pages.excel_labels import router as excel_labels_page_router
 
 
@@ -65,7 +66,7 @@ app.include_router(excel_outbound_page_router)
 app.include_router(damage_page_router)
 app.include_router(damage_history_page_router)
 
-# ✅ 라벨 페이지 등록
+# ✅ 라벨 출력 페이지 등록
 app.include_router(excel_labels_page_router)
 
 
@@ -79,6 +80,7 @@ from app.pages.mobile_qr_inventory import router as mobile_qr_inventory_router
 from app.pages.mobile_inventory_detail import router as mobile_inventory_detail_router
 from app.pages.mobile_move import router as mobile_move_router
 from app.pages.mobile_cs import router as mobile_cs_router
+
 
 app.include_router(mobile_home_router)
 app.include_router(mobile_qr_router)
@@ -102,8 +104,8 @@ from app.routers.api_damage_codes import router as api_damage_codes_router
 from app.routers.excel_inbound import router as api_excel_inbound_router
 from app.routers.excel_outbound import router as api_excel_outbound_router
 
-# ✅ 라벨 API 추가
-from app.routers.excel_labels import router as api_excel_labels_router
+# ✅ 라벨 API (제품 라벨)
+from app.routers.api_labels import router as api_labels_router
 
 
 app.include_router(api_inbound_router)
@@ -117,4 +119,4 @@ app.include_router(api_excel_inbound_router)
 app.include_router(api_excel_outbound_router)
 
 # ✅ 라벨 API 등록
-app.include_router(api_excel_labels_router)
+app.include_router(api_labels_router)
