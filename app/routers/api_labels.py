@@ -4,6 +4,9 @@ from fastapi.templating import Jinja2Templates
 from app.core.paths import TEMPLATES_DIR
 
 import openpyxl
+import qrcode
+import base64
+from io import BytesIO
 
 router = APIRouter(prefix="/api/labels", tags=["라벨 API"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -19,12 +22,19 @@ def product_label_print(request: Request, file: UploadFile = File(...)):
 
     items = []
 
-    # 2번째 줄부터 데이터 읽기
     for row in ws.iter_rows(min_row=2, values_only=True):
         if not row or not row[0]:
             continue
 
         brand, code, name, lot, spec = row
+
+        # ✅ QR 내용
+        qr_text = f"PRODUCT:{code}|LOT:{lot}"
+
+        qr = qrcode.make(qr_text)
+        buffer = BytesIO()
+        qr.save(buffer, format="PNG")
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
 
         items.append({
             "brand": brand,
@@ -32,6 +42,7 @@ def product_label_print(request: Request, file: UploadFile = File(...)):
             "name": name,
             "lot": lot,
             "spec": spec,
+            "qr_base64": qr_base64,
         })
 
     return templates.TemplateResponse(
