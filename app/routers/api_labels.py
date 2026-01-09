@@ -15,12 +15,13 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # =====================================================
 # 🏷️ 제품 라벨 (엑셀 업로드 → 미리보기)
+# 규격: LS-3108 (99.1 × 38.1)
 # =====================================================
 @router.post("/product", response_class=HTMLResponse)
 def product_label_preview(
     request: Request,
     file: UploadFile = File(...),
-    spec: str = Query("3108")  # 3108 = 제품라벨
+    spec: str = Query("3108")  # 제품 라벨
 ):
     if not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="엑셀(xlsx) 파일만 업로드 가능합니다.")
@@ -30,15 +31,8 @@ def product_label_preview(
 
     items = []
 
-    """
-    엑셀 컬럼
-    A: 브랜드
-    B: 품번
-    C: 품명
-    D: LOT
-    E: 규격
-    """
-
+    # 엑셀 컬럼
+    # A: 브랜드 / B: 품번 / C: 품명 / D: LOT / E: 규격
     for row in ws.iter_rows(min_row=2, values_only=True):
         if not row or not row[1]:
             continue
@@ -51,7 +45,6 @@ def product_label_preview(
         lot = str(lot).strip()
         size = str(size).strip()
 
-        # QR 표준
         qr_text = f"PRODUCT:{code}|LOT:{lot}"
 
         qr = qrcode.make(qr_text)
@@ -76,20 +69,20 @@ def product_label_preview(
         {
             "request": request,
             "items": items,
-            "label_spec": spec,   # 3108
-            "print_url": "/page/labels/product/print"
+            "label_spec": spec,   # 반드시 전달
         }
     )
 
 
 # =====================================================
 # 📍 로케이션 라벨 (엑셀 업로드 → 미리보기)
+# 규격: LS-3118 (99.1 × 140)
 # =====================================================
 @router.post("/location/excel", response_class=HTMLResponse)
 def location_label_excel_preview(
     request: Request,
     file: UploadFile = File(...),
-    spec: str = Query("3118")  # 3118 = 로케이션
+    spec: str = Query("3118")  # 로케이션 라벨
 ):
     if not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="엑셀(xlsx) 파일만 업로드 가능합니다.")
@@ -99,17 +92,13 @@ def location_label_excel_preview(
 
     locations = []
 
-    """
-    엑셀 컬럼
-    A: LOCATION
-    """
-
+    # 엑셀 컬럼
+    # A: LOCATION
     for row in ws.iter_rows(min_row=2, values_only=True):
         if not row or not row[0]:
             continue
 
         location = str(row[0]).strip().upper()
-
         qr_text = f"LOCATION:{location}"
 
         qr = qrcode.make(qr_text)
@@ -130,14 +119,13 @@ def location_label_excel_preview(
         {
             "request": request,
             "locations": locations,
-            "label_spec": spec,   # 3118
-            "print_url": "/page/labels/location/print"
+            "label_spec": spec,   # 반드시 전달
         }
     )
 
 
 # =====================================================
-# 📍 로케이션 라벨 (단건 → 바로 미리보기)
+# 📍 로케이션 라벨 (단건 입력 → 미리보기)
 # =====================================================
 @router.get("/location", response_class=HTMLResponse)
 def location_single_preview(
@@ -162,6 +150,5 @@ def location_single_preview(
                 "qr_base64": qr_base64
             }],
             "label_spec": spec,
-            "print_url": "/page/labels/location/print"
         }
     )
