@@ -3,34 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>로케이션 라벨 출력</title>
-  <link rel="stylesheet" href="/static/css/label_print.css">
-  <style>
-    .label.large {
-      width: 99.1mm;
-      height: 140mm;
-      border: 1px solid #000;
-      box-sizing: border-box;
-      padding: 8mm;
-      text-align: center;
-      page-break-after: always;
-    }
-
-    .location-text {
-      font-size: 28pt;
-      font-weight: bold;
-      margin-bottom: 10mm;
-    }
-
-    .location-qr {
-      width: 70mm;
-      height: 70mm;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/label_3118.css">
 </head>
 <body>
 
-<div class="label large">
+<div class="label-location">
   <div class="location-text">{{ location }}</div>
+
   <img
     src="data:image/png;base64,{{ qr_base64 }}"
     class="location-qr"
