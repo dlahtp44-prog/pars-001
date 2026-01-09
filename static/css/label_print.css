@@ -1,13 +1,23 @@
 @media print {
-    body { margin: 0; }
+    body {
+        margin: 0;
+    }
 }
+
 .label {
     width: 99.1mm;
     height: 38.1mm;
     border: 1px solid #000;
+    box-sizing: border-box;
+    padding: 4mm;
     font-size: 10pt;
 }
+
 .label.large {
+    width: 99.1mm;
     height: 140mm;
-    font-size: 24pt;
+    font-size: 28pt;
+    text-align: center;
+    line-height: 140mm;
+    font-weight: bold;
 }
