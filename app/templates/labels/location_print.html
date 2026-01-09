@@ -2,21 +2,17 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>로케이션 라벨 출력 (LS-3118)</title>
+  <title>로케이션 라벨 (단건)</title>
   <link rel="stylesheet" href="/static/css/label_print.css">
 </head>
 <body>
 
 <div class="sheet">
   <div class="label ls3118">
-    <div class="location-text">
-      {{ location }}
-    </div>
-
+    <div class="location-text">{{ location }}</div>
     <img
       class="location-qr"
       src="data:image/png;base64,{{ qr_base64 }}"
-      alt="LOCATION QR"
     >
   </div>
 </div>
