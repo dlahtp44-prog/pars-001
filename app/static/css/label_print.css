@@ -1,4 +1,12 @@
+/* =================================================
+   공통 인쇄 설정
+   ================================================= */
 @media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
   body {
     margin: 0;
   }
@@ -10,7 +18,9 @@ body {
                "Malgun Gothic", Arial, sans-serif;
 }
 
-/* ===== A4 전체 ===== */
+/* =================================================
+   A4 시트 공통
+   ================================================= */
 .sheet {
   width: 210mm;
   height: 297mm;
@@ -19,43 +29,83 @@ body {
   box-sizing: border-box;
 }
 
-/* ===== 라벨 1칸 (99.1 × 38.1) ===== */
+/* =================================================
+   공통 라벨 기본
+   ================================================= */
 .label {
+  box-sizing: border-box;
+  border: 1px solid #000;   /* 테스트용 */
+  page-break-inside: avoid;
+}
+
+/* =================================================
+   LS-3108 (제품 라벨)
+   99.1mm × 38.1mm / A4 14칸
+   ================================================= */
+.label.ls3108 {
   width: 99.1mm;
   height: 38.1mm;
-  box-sizing: border-box;
-  border: 1px solid #000;
-  padding: 3mm;
+  padding: 2.5mm;
+
   display: flex;
+  align-items: center;
   gap: 3mm;
 }
 
-/* ===== 좌측 텍스트 ===== */
-.label-text {
+/* ── 좌측 텍스트 */
+.ls3108 .label-text {
   flex: 1;
   font-size: 7.5pt;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
-.label-text .brand {
+.ls3108 .label-text .brand {
   font-weight: bold;
   font-size: 8.5pt;
 }
 
-.label-text .code {
-  font-size: 9pt;
+.ls3108 .label-text .code {
+  font-size: 8pt;
 }
 
-.label-text .name {
-  font-size: 9pt;
+.ls3108 .label-text .name {
+  font-size: 7.5pt;
 }
 
-.label-text .meta {
+.ls3108 .label-text .meta {
   font-size: 6.5pt;
 }
 
-/* ===== 우측 QR ===== */
-.label-qr {
-  width: 35mm;
-  height: 35mm;
+/* ── QR */
+.ls3108 .label-qr {
+  width: 32mm;
+  height: 32mm;
+  flex-shrink: 0;
+}
+
+/* =================================================
+   LS-3118 (로케이션 라벨)
+   99.1mm × 140mm / A4 4칸
+   ================================================= */
+.label.ls3118 {
+  width: 99.1mm;
+  height: 140mm;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 로케이션 텍스트 */
+.ls3118 .location-text {
+  font-size: 28pt;
+  font-weight: bold;
+  margin-bottom: 8mm;
+}
+
+/* ── QR */
+.ls3118 .location-qr {
+  width: 60mm;
+  height: 60mm;
 }
