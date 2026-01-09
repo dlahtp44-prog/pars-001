@@ -36,6 +36,29 @@ body {
 
 .label .code {
   font-size: 9pt;
+  /* =========================
+   제품 라벨 QR 레이아웃
+========================= */
+.label.product {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label.product .left {
+  width: 65%;
+}
+
+.label.product .right {
+  width: 30%;
+  text-align: center;
+}
+
+.product-qr {
+  width: 28mm;
+  height: 28mm;
+}
+
 }
 
 .label .name {
