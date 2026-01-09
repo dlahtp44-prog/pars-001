@@ -13,8 +13,10 @@
   {% for item in locations %}
   <div class="label ls3118">
     <div class="location-text">{{ item.location }}</div>
-    <img class="location-qr"
-         src="data:image/png;base64,{{ item.qr_base64 }}">
+    <img
+      class="location-qr"
+      src="data:image/png;base64,{{ item.qr_base64 }}"
+    >
   </div>
   {% endfor %}
 </div>
