@@ -2,21 +2,30 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>로케이션 라벨 출력 (엑셀)</title>
-  <link rel="stylesheet" href="/static/css/label_3118.css">
+  <title>로케이션 라벨 엑셀 출력 (LS-3118)</title>
+  <link rel="stylesheet" href="/static/css/label_print.css">
 </head>
 <body>
 
-{% for item in locations %}
-  <div class="label-location">
-    <div class="location-text">{{ item.location }}</div>
+<h3 style="margin: 10px;">
+  📍 로케이션 라벨 미리보기 (LS-3118)
+</h3>
 
-    <img
-      src="data:image/png;base64,{{ item.qr_base64 }}"
-      class="location-qr"
-    >
-  </div>
-{% endfor %}
+<div class="sheet">
+  {% for item in locations %}
+    <div class="label ls3118">
+      <div class="location-text">
+        {{ item.location }}
+      </div>
+
+      <img
+        class="location-qr"
+        src="data:image/png;base64,{{ item.qr_base64 }}"
+        alt="LOCATION QR"
+      >
+    </div>
+  {% endfor %}
+</div>
 
 <script>
   window.print();
