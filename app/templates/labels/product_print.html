@@ -2,14 +2,17 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>제품 라벨 출력</title>
+  <title>제품 라벨 미리보기 (LS-3108)</title>
   <link rel="stylesheet" href="/static/css/label_print.css">
 </head>
 <body>
 
+<h3>📦 제품 라벨 미리보기 (LS-3108)</h3>
+<p>※ 출력 전 라벨 크기/배치를 확인하세요</p>
+
 <div class="sheet">
   {% for item in items %}
-  <div class="label">
+  <div class="label ls3108">
     <div class="label-text">
       <div class="brand">{{ item.brand }}</div>
       <div class="code">{{ item.code }}</div>
@@ -18,19 +21,11 @@
       <div class="meta">{{ item.spec }}</div>
     </div>
 
-    <!-- ✅ QR 자동 비율 -->
-    <img
-      class="label-qr"
-      src="data:image/png;base64,{{ item.qr_base64 }}"
-      alt="QR"
-    >
+    <img class="label-qr"
+         src="data:image/png;base64,{{ item.qr_base64 }}">
   </div>
   {% endfor %}
 </div>
-
-<script>
-  window.print();
-</script>
 
 </body>
 </html>
