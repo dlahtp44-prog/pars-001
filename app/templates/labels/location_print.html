@@ -2,20 +2,26 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>로케이션 라벨</title>
+  <title>로케이션 라벨 출력</title>
   <link rel="stylesheet" href="/static/css/label_print.css">
 </head>
 <body>
 
-<div class="label large">
-  <div class="location-text">{{ location }}</div>
+<div class="sheet">
+  <div class="label-location">
+    <div class="location-text">{{ location }}</div>
 
-  <img
-    src="data:image/png;base64,{{ qr_base64 }}"
-    class="location-qr"
-    alt="Location QR"
-  >
+    <img
+      src="data:image/png;base64,{{ qr_base64 }}"
+      class="location-qr"
+      alt="Location QR"
+    >
+  </div>
 </div>
+
+<script>
+  window.print();
+</script>
 
 </body>
 </html>
