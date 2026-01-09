@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>라벨 출력 센터</title>
+  <link rel="stylesheet" href="/static/css/label_print.css">
+</head>
+<body>
+
+<h2>🏷️ 라벨 출력 센터</h2>
+
+<hr>
+
+<h3>제품 라벨 출력</h3>
+<form action="/api/labels/product" method="post" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".xlsx" required>
+  <button type="submit">엑셀 업로드 → 출력</button>
+</form>
+
+<hr>
+
+<h3>로케이션 라벨 출력</h3>
+<form action="/page/labels/location" method="get">
+  <input type="text" name="location" placeholder="B01-01-02-A" required>
+  <button type="submit">출력</button>
+</form>
+
+</body>
+</html>
