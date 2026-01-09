@@ -1,16 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" href="/static/css/label_print.css">
-</head>
-<body>
-{% for item in items %}
-<div class="label">
-    <div>{{ item.brand }}</div>
-    <div>{{ item.code }}</div>
-    <div>{{ item.name }}</div>
-    <div>{{ item.lot }} / {{ item.spec }}</div>
+<div class="sheet">
+  {% for item in items %}
+  <div class="label-product">
+    <div class="label-text">
+      <div class="brand">{{ item.brand }}</div>
+      <div class="code">{{ item.code }}</div>
+      <div class="name">{{ item.name }}</div>
+      <div class="meta">LOT: {{ item.lot }}</div>
+      <div class="meta">{{ item.spec }}</div>
+    </div>
+
+    <img
+      class="label-qr"
+      src="data:image/png;base64,{{ item.qr_base64 }}"
+    >
+  </div>
+  {% endfor %}
 </div>
-{% endfor %}
-</body>
-</html>
