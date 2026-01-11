@@ -4,72 +4,79 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="/static/app.css"/>
-  <link rel="stylesheet" href="/static/calendar.css"/>
-  <title>달력</title>
+  <title>📅 달력</title>
 </head>
+
 <body>
 <div class="container">
   <div class="card">
-    <div class="cal-top">
-      <div class="cal-title">
-        <h2 style="margin:0;">월간 달력</h2>
-        <div class="small" id="calSub"></div>
-      </div>
-      <div class="cal-actions">
-        <button class="btn secondary" id="prevBtn" type="button">◀ 이전달</button>
-        <button class="btn secondary" id="todayBtn" type="button">오늘</button>
-        <button class="btn secondary" id="nextBtn" type="button">다음달 ▶</button>
-        <a class="btn secondary" href="/">메인</a>
-      </div>
+
+    <!-- =========================
+         HEADER
+    ========================= -->
+    <div class="header-bar">
+      <h1>📅 달력</h1>
+      <a href="/" class="logout-btn">메인</a>
     </div>
 
-    <div class="cal-grid" id="calGrid" aria-label="월간 달력"></div>
-
-    <div class="cal-editor" id="editor">
-      <div class="cal-editor-head">
-        <div>
-          <div class="small">선택 날짜</div>
-          <div class="cal-editor-date" id="selectedDate">-</div>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-          <button class="btn" id="saveBtn" type="button">저장</button>
-          <button class="btn danger" id="deleteBtn" type="button">삭제</button>
-        </div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px;">
-        <div>
-          <label>메모 1 (20자)</label>
-          <input id="line1" maxlength="20" placeholder="최대 20자"/>
-        </div>
-        <div>
-          <label>메모 2 (20자)</label>
-          <input id="line2" maxlength="20" placeholder="최대 20자"/>
-        </div>
-        <div>
-          <label>메모 3 (20자)</label>
-          <input id="line3" maxlength="20" placeholder="최대 20자"/>
-        </div>
-        <div>
-          <label>메모 4 (20자)</label>
-          <input id="line4" maxlength="20" placeholder="최대 20자"/>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-        <div style="min-width:240px;">
-          <label>작성자(선택)</label>
-          <input id="operator" maxlength="20" placeholder="예: 모세"/>
-        </div>
-        <div class="small" id="msg" aria-live="polite"></div>
-      </div>
+    <!-- =========================
+         CALENDAR HEADER
+    ========================= -->
+    <div class="calendar-header">
+      <button class="nav-btn" id="prevMonth">◀</button>
+      <h2 id="calendarTitle">2026년 1월</h2>
+      <button class="nav-btn" id="nextMonth">▶</button>
     </div>
+
+    <!-- =========================
+         WEEK HEADER
+    ========================= -->
+    <div class="calendar-week">
+      <div>일</div>
+      <div>월</div>
+      <div>화</div>
+      <div>수</div>
+      <div>목</div>
+      <div>금</div>
+      <div>토</div>
+    </div>
+
+    <!-- =========================
+         CALENDAR GRID
+    ========================= -->
+    <div class="calendar-grid" id="calendarGrid">
+
+      <!-- 예시 날짜 셀 (JS로 동적 생성 예정) -->
+      <div class="calendar-cell clickable today has-memo">
+        <div class="calendar-date">11</div>
+        <div class="calendar-memo">
+          <div>메모1</div>
+          <div>메모2</div>
+          <div>메모3</div>
+          <div>메모4</div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="small">
+      • 날짜 클릭 → 메모 추가 / 수정 / 삭제<br/>
+      • 메모는 최대 <b>4줄</b>, 한 줄 <b>20자</b>까지 표시됩니다.
+    </p>
+
   </div>
 </div>
 
+<!-- =========================
+     (다음 단계용) JS 자리
+========================= -->
 <script>
-  window.__CAL_INIT__ = { year: {{year}}, month: {{month}} };
+  // 🔜 다음 단계에서 여기에
+  // - 월 이동
+  // - 날짜 생성
+  // - 메모 CRUD
+  // 들어갈 예정
 </script>
-<script src="/static/calendar.js"></script>
+
 </body>
 </html>
