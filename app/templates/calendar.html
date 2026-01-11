@@ -11,71 +11,120 @@
 <div class="container">
   <div class="card">
 
-    <!-- =========================
-         HEADER
-    ========================= -->
+    <!-- HEADER -->
     <div class="header-bar">
       <h1>📅 달력</h1>
       <a href="/" class="logout-btn">메인</a>
     </div>
 
-    <!-- =========================
-         CALENDAR HEADER
-    ========================= -->
+    <!-- CALENDAR HEADER -->
     <div class="calendar-header">
       <button class="nav-btn" id="prevMonth">◀</button>
-      <h2 id="calendarTitle">2026년 1월</h2>
+      <h2 id="calendarTitle"></h2>
       <button class="nav-btn" id="nextMonth">▶</button>
     </div>
 
-    <!-- =========================
-         WEEK HEADER
-    ========================= -->
+    <!-- WEEK -->
     <div class="calendar-week">
-      <div>일</div>
-      <div>월</div>
-      <div>화</div>
-      <div>수</div>
-      <div>목</div>
-      <div>금</div>
-      <div>토</div>
+      <div>일</div><div>월</div><div>화</div>
+      <div>수</div><div>목</div><div>금</div><div>토</div>
     </div>
 
-    <!-- =========================
-         CALENDAR GRID
-    ========================= -->
-    <div class="calendar-grid" id="calendarGrid">
-
-      <!-- 예시 날짜 셀 (JS로 동적 생성 예정) -->
-      <div class="calendar-cell clickable today has-memo">
-        <div class="calendar-date">11</div>
-        <div class="calendar-memo">
-          <div>메모1</div>
-          <div>메모2</div>
-          <div>메모3</div>
-          <div>메모4</div>
-        </div>
-      </div>
-
-    </div>
+    <!-- GRID -->
+    <div class="calendar-grid" id="calendarGrid"></div>
 
     <p class="small">
-      • 날짜 클릭 → 메모 추가 / 수정 / 삭제<br/>
-      • 메모는 최대 <b>4줄</b>, 한 줄 <b>20자</b>까지 표시됩니다.
+      • 날짜 클릭 → 메모 추가 예정<br/>
+      • 메모는 최대 <b>4줄 / 줄당 20자</b>
     </p>
 
   </div>
 </div>
 
-<!-- =========================
-     (다음 단계용) JS 자리
-========================= -->
 <script>
-  // 🔜 다음 단계에서 여기에
-  // - 월 이동
-  // - 날짜 생성
-  // - 메모 CRUD
-  // 들어갈 예정
+/* =====================================================
+   CALENDAR CORE
+===================================================== */
+
+let current = new Date();
+current.setDate(1);
+
+const titleEl = document.getElementById("calendarTitle");
+const gridEl = document.getElementById("calendarGrid");
+
+const today = new Date();
+const todayKey = today.toISOString().slice(0,10);
+
+/* 임시 메모 데이터 (다음 단계에서 DB 연동) */
+const memoData = {
+  "2026-01-11": ["메모1", "메모2", "메모3"],
+  "2026-01-20": ["출고 예정", "현장 점검"],
+};
+
+function renderCalendar() {
+  gridEl.innerHTML = "";
+
+  const year = current.getFullYear();
+  const month = current.getMonth();
+
+  titleEl.textContent = `${year}년 ${month + 1}월`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  /* 앞 공백 */
+  for (let i = 0; i < firstDay; i++) {
+    gridEl.appendChild(document.createElement("div"));
+  }
+
+  /* 날짜 생성 */
+  for (let d = 1; d <= lastDate; d++) {
+    const date = new Date(year, month, d);
+    const key = date.toISOString().slice(0,10);
+
+    const cell = document.createElement("div");
+    cell.className = "calendar-cell clickable";
+
+    if (key === todayKey) cell.classList.add("today");
+    if (memoData[key]) cell.classList.add("has-memo");
+
+    const dateEl = document.createElement("div");
+    dateEl.className = "calendar-date";
+    dateEl.textContent = d;
+
+    const memoEl = document.createElement("div");
+    memoEl.className = "calendar-memo";
+
+    if (memoData[key]) {
+      memoData[key].slice(0,4).forEach(t => {
+        const line = document.createElement("div");
+        line.textContent = t;
+        memoEl.appendChild(line);
+      });
+    }
+
+    cell.appendChild(dateEl);
+    cell.appendChild(memoEl);
+
+    cell.onclick = () => {
+      alert(`${year}-${month+1}-${d} 클릭\n(다음 단계: 메모 입력)`);
+    };
+
+    gridEl.appendChild(cell);
+  }
+}
+
+/* 월 이동 */
+document.getElementById("prevMonth").onclick = () => {
+  current.setMonth(current.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById("nextMonth").onclick = () => {
+  current.setMonth(current.getMonth() + 1);
+  renderCalendar();
+};
+
+renderCalendar();
 </script>
 
 </body>
