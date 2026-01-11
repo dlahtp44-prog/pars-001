@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <link rel="stylesheet" href="/static/calendar.css"/>
+  <title>달력</title>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="cal-top">
+      <div class="cal-title">
+        <h2 style="margin:0;">월간 달력</h2>
+        <div class="small" id="calSub"></div>
+      </div>
+      <div class="cal-actions">
+        <button class="btn secondary" id="prevBtn" type="button">◀ 이전달</button>
+        <button class="btn secondary" id="todayBtn" type="button">오늘</button>
+        <button class="btn secondary" id="nextBtn" type="button">다음달 ▶</button>
+        <a class="btn secondary" href="/">메인</a>
+      </div>
+    </div>
+
+    <div class="cal-grid" id="calGrid" aria-label="월간 달력"></div>
+
+    <div class="cal-editor" id="editor">
+      <div class="cal-editor-head">
+        <div>
+          <div class="small">선택 날짜</div>
+          <div class="cal-editor-date" id="selectedDate">-</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+          <button class="btn" id="saveBtn" type="button">저장</button>
+          <button class="btn danger" id="deleteBtn" type="button">삭제</button>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:10px;">
+        <div>
+          <label>메모 1 (20자)</label>
+          <input id="line1" maxlength="20" placeholder="최대 20자"/>
+        </div>
+        <div>
+          <label>메모 2 (20자)</label>
+          <input id="line2" maxlength="20" placeholder="최대 20자"/>
+        </div>
+        <div>
+          <label>메모 3 (20자)</label>
+          <input id="line3" maxlength="20" placeholder="최대 20자"/>
+        </div>
+        <div>
+          <label>메모 4 (20자)</label>
+          <input id="line4" maxlength="20" placeholder="최대 20자"/>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+        <div style="min-width:240px;">
+          <label>작성자(선택)</label>
+          <input id="operator" maxlength="20" placeholder="예: 모세"/>
+        </div>
+        <div class="small" id="msg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.__CAL_INIT__ = { year: {{year}}, month: {{month}} };
+</script>
+<script src="/static/calendar.js"></script>
+</body>
+</html>
