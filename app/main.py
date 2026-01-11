@@ -22,13 +22,17 @@ def on_startup():
 # =========================
 app.add_middleware(
     SessionMiddleware,
-    secret_key="pars-wms-secret-key",  # 내부용, 간단히 고정
+    secret_key="pars-wms-secret-key",  # 내부용
 )
 
 # =========================
 # STATIC
 # =========================
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount(
+    "/static",
+    StaticFiles(directory=str(STATIC_DIR)),
+    name="static"
+)
 
 # =========================
 # PC PAGES
@@ -47,7 +51,7 @@ from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
 
-app.include_router(login_router)      # ✅ 로그인 먼저
+app.include_router(login_router)      # 로그인 먼저
 app.include_router(index_router)
 app.include_router(inbound_page_router)
 app.include_router(outbound_page_router)
@@ -91,6 +95,7 @@ from app.routers.api_damage_codes import router as api_damage_codes_router
 from app.routers.excel_inbound import router as api_excel_inbound_router
 from app.routers.excel_outbound import router as api_excel_outbound_router
 from app.routers.api_labels import router as api_labels_router
+from app.routers.api_admin import router as api_admin_router  # ✅ 추가
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -102,3 +107,4 @@ app.include_router(api_damage_codes_router)
 app.include_router(api_excel_inbound_router)
 app.include_router(api_excel_outbound_router)
 app.include_router(api_labels_router)
+app.include_router(api_admin_router)  # ✅ 재고/이력 초기화
