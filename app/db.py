@@ -692,3 +692,140 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
+
+# app/db.py 맨 아래에 추가
+
+from app.utils.erp_verify import make_compare_key
+
+def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
+    """
+    Returns:
+      {
+        "summary": {total, match, diff, wms_missing, erp_missing, rollup},
+        "rows": [ {status, mode, item_code, lot, spec, erp_qty, wms_qty, diff, note} ... ]
+      }
+    """
+    # 1) WMS inventory (합산)
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT item_code, lot, spec, SUM(qty) AS qty
+            FROM inventory
+            WHERE qty > 0
+            GROUP BY item_code, lot, spec
+            """
+        )
+        wms_raw = [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+    key_types = ["L3", "L2_LOT", "L2_SPEC", "L1"]
+    erp_maps = {k: {} for k in key_types}
+    wms_maps = {k: {} for k in key_types}
+    erp_present: dict[str, set[str]] = {}
+    wms_present: dict[str, set[str]] = {}
+
+    def _add(maps, present, item_code: str, lot: str, spec: str, qty: float):
+        item_code = _norm(item_code)
+        lot = _norm(lot)
+        spec = _norm(spec)
+        if not item_code:
+            return
+
+        kt, key = make_compare_key(item_code, lot, spec)
+        maps[kt][key] = float(maps[kt].get(key, 0.0)) + float(qty)
+        present.setdefault(item_code, set()).add(kt)
+
+        # rollup들 추가
+        maps["L1"][(item_code,)] = float(maps["L1"].get((item_code,), 0.0)) + float(qty)
+        present.setdefault(item_code, set()).add("L1")
+
+        if lot:
+            maps["L2_LOT"][(item_code, lot)] = float(maps["L2_LOT"].get((item_code, lot), 0.0)) + float(qty)
+            present.setdefault(item_code, set()).add("L2_LOT")
+        if spec:
+            maps["L2_SPEC"][(item_code, spec)] = float(maps["L2_SPEC"].get((item_code, spec), 0.0)) + float(qty)
+            present.setdefault(item_code, set()).add("L2_SPEC")
+        if lot and spec:
+            maps["L3"][(item_code, lot, spec)] = float(maps["L3"].get((item_code, lot, spec), 0.0)) + float(qty)
+            present.setdefault(item_code, set()).add("L3")
+
+    for r in erp_rows or []:
+        _add(erp_maps, erp_present, r.get("item_code",""), r.get("lot",""), r.get("spec",""), float(r.get("qty") or 0))
+
+    for r in wms_raw or []:
+        _add(wms_maps, wms_present, r.get("item_code",""), r.get("lot",""), r.get("spec",""), float(r.get("qty") or 0))
+
+    all_codes = sorted(set(erp_present.keys()) | set(wms_present.keys()))
+
+    def choose_mode(code: str) -> str:
+        e = erp_present.get(code, set())
+        w = wms_present.get(code, set())
+        if "L3" in e and "L3" in w:
+            return "L3"
+        if "L2_LOT" in e and "L2_LOT" in w:
+            return "L2_LOT"
+        if "L2_SPEC" in e and "L2_SPEC" in w:
+            return "L2_SPEC"
+        return "L1"
+
+    summary = {"total": 0, "match": 0, "diff": 0, "wms_missing": 0, "erp_missing": 0, "rollup": 0}
+    out_rows = []
+
+    for code in all_codes:
+        mode = choose_mode(code)
+        e_types = erp_present.get(code, set())
+        w_types = wms_present.get(code, set())
+
+        did_rollup = (mode == "L1" and (e_types - {"L1"} or w_types - {"L1"}) and (e_types and w_types))
+
+        # 해당 code에 대한 key set 추출
+        def keys_for_code(m, mode_t):
+            return {k for k in m[mode_t].keys() if k and k[0] == code}
+
+        keys = keys_for_code(erp_maps, mode) | keys_for_code(wms_maps, mode)
+        if not keys:
+            continue
+
+        for key in sorted(keys):
+            erp_qty = float(erp_maps[mode].get(key, 0.0))
+            wms_qty = float(wms_maps[mode].get(key, 0.0))
+            diff = erp_qty - wms_qty
+
+            lot = ""
+            spec = ""
+            if mode == "L3":
+                _, lot, spec = key
+            elif mode == "L2_LOT":
+                _, lot = key
+            elif mode == "L2_SPEC":
+                _, spec = key
+
+            if erp_qty > 0 and wms_qty > 0:
+                if abs(diff) < 1e-9:
+                    status = "✅ 일치"; summary["match"] += 1
+                else:
+                    status = "⚠️ 차이"; summary["diff"] += 1
+            elif erp_qty > 0 and wms_qty == 0:
+                status = "❌ WMS 없음"; summary["wms_missing"] += 1
+            elif erp_qty == 0 and wms_qty > 0:
+                status = "❌ ERP 없음"; summary["erp_missing"] += 1
+            else:
+                status = "—"
+
+            note = "관리단위(LOT/규격) 불일치로 품번 단위 합산 비교" if did_rollup else ""
+            if did_rollup:
+                summary["rollup"] += 1
+
+            out_rows.append({
+                "status": status, "mode": mode, "item_code": code,
+                "lot": lot, "spec": spec,
+                "erp_qty": round(erp_qty, 3), "wms_qty": round(wms_qty, 3),
+                "diff": round(diff, 3), "note": note
+            })
+            summary["total"] += 1
+
+    return {"summary": summary, "rows": out_rows}
+
