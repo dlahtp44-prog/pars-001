@@ -605,3 +605,40 @@ def query_damage_summary_by_category(year=None, month=None):
         return [dict(r) for r in cur.fetchall()]
     finally:
         conn.close()
+# =====================================================
+# HISTORY QUERY (PAGE / EXCEL 공용)
+# =====================================================
+
+def query_history(
+    *,
+    limit: int = 300,
+    year: int | None = None,
+    month: int | None = None,
+    day: int | None = None,
+):
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        where, params = [], []
+
+        if year and month and day:
+            where.append("created_at LIKE ?")
+            params.append(f"{year:04d}-{month:02d}-{day:02d}%")
+        elif year and month:
+            where.append("created_at LIKE ?")
+            params.append(f"{year:04d}-{month:02d}%")
+        elif year:
+            where.append("created_at LIKE ?")
+            params.append(f"{year:04d}%")
+
+        sql = "SELECT * FROM history"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cur.execute(sql, params)
+        return cur.fetchall()
+    finally:
+        conn.close()
