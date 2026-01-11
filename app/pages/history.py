@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.paths import TEMPLATES_DIR
 from app.db import query_history
+from app.core.qty import display_qty
 from app.utils.excel_export import rows_to_xlsx_bytes
 
 router = APIRouter(prefix="/page/history", tags=["page-history"])
@@ -22,6 +23,18 @@ def _to_int(v: str | None):
         return None
 
 
+def _format_rows(rows):
+    """
+    화면/엑셀 공용 수량 표시 포맷 적용
+    """
+    view_rows = []
+    for r in rows:
+        d = dict(r)
+        d["qty"] = display_qty(d.get("qty"))
+        view_rows.append(d)
+    return view_rows
+
+
 @router.get("", response_class=HTMLResponse)
 def page(
     request: Request,
@@ -37,11 +50,13 @@ def page(
         day=_to_int(day),
     )
 
+    view_rows = _format_rows(rows)
+
     return templates.TemplateResponse(
         "history.html",
         {
             "request": request,
-            "rows": rows,
+            "rows": view_rows,
             "year": year or "",
             "month": month or "",
             "day": day or "",
@@ -64,6 +79,8 @@ def download_excel(
         day=_to_int(day),
     )
 
+    view_rows = _format_rows(rows)
+
     columns = [
         ("created_at", "시간"),
         ("type", "유형"),
@@ -80,7 +97,11 @@ def download_excel(
         ("operator", "작업자"),
     ]
 
-    data = rows_to_xlsx_bytes(rows, columns, sheet_name="이력")
+    data = rows_to_xlsx_bytes(
+        view_rows,
+        columns,
+        sheet_name="이력",
+    )
 
     return StreamingResponse(
         iter([data]),
