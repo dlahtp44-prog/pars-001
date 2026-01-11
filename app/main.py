@@ -66,6 +66,7 @@ from app.pages.excel_outbound import router as excel_outbound_page_router
 from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
+from app.pages.erp_verify import router as erp_verify_page_router
 
 # ✅ 📅 PC 달력 페이지
 from app.pages.calendar import router as calendar_page_router
@@ -84,7 +85,7 @@ app.include_router(excel_outbound_page_router)
 app.include_router(damage_page_router)
 app.include_router(damage_history_page_router)
 app.include_router(labels_page_router)
-
+app.include_router(erp_verify_page_router)
 # ✅ 📅 PC 달력 등록
 app.include_router(calendar_page_router)
 
@@ -126,6 +127,7 @@ from app.routers.excel_outbound import router as api_excel_outbound_router
 from app.routers.api_labels import router as api_labels_router
 from app.routers.api_admin import router as api_admin_router   # 초기화 API
 from app.routers.api_rollback import router as api_rollback_router  # 롤백 API
+from app.routers.api_erp_verify import router as api_erp_verify_router
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -139,3 +141,4 @@ app.include_router(api_excel_outbound_router)
 app.include_router(api_labels_router)
 app.include_router(api_admin_router)
 app.include_router(api_rollback_router)
+app.include_router(api_erp_verify_router)
