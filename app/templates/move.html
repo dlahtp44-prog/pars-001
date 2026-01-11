@@ -4,19 +4,25 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="/static/app.css"/>
-  <title>이동</title>
+  <title>이동 | PARS WMS</title>
 </head>
+
 <body>
 <div class="container">
   <div class="card">
-    <h2>이동</h2>
+
+    <!-- HEADER -->
+    <div class="header-bar">
+      <h2>이동</h2>
+      <a href="/logout" class="logout-btn">로그아웃</a>
+    </div>
 
     <form id="f">
       <label>창고</label>
       <input name="warehouse" type="text" required>
+
       <label>작업자</label>
       <input name="operator" type="text" placeholder="예: 홍길동" required>
-
 
       <label>출발 로케이션</label>
       <input name="from_location" type="text" required>
@@ -25,13 +31,13 @@
       <input name="to_location" type="text" required>
 
       <label>브랜드</label>
-      <input name="brand" type="text" required>
+      <input name="brand" type="text">
 
       <label>품번</label>
       <input name="item_code" type="text" required>
 
       <label>품명</label>
-      <input name="item_name" type="text" required>
+      <input name="item_name" type="text">
 
       <label>LOT</label>
       <input name="lot" type="text" required>
@@ -40,7 +46,14 @@
       <input name="spec" type="text" required>
 
       <label>수량</label>
-      <input name="qty" type="number" min="1" step="1" required>
+      <input
+        name="qty"
+        type="number"
+        step="0.001"
+        inputmode="decimal"
+        placeholder="수량 (소수점 3자리까지)"
+        required
+      >
 
       <label>비고</label>
       <input name="note" type="text" placeholder="선택">
@@ -49,19 +62,28 @@
     </form>
 
     <pre id="out" class="card" style="white-space:pre-wrap"></pre>
-    <p><a href="/">← 메인</a></p>
+
+    <p>
+      <a href="/">← 메인</a>
+    </p>
   </div>
 </div>
 
 <script>
-const f=document.getElementById('f');
-const out=document.getElementById('out');
-f.addEventListener('submit', async (e)=>{
+const f = document.getElementById('f');
+const out = document.getElementById('out');
+
+f.addEventListener('submit', async (e) => {
   e.preventDefault();
-  out.textContent='처리중...';
-  const fd=new FormData(f);
-  const res=await fetch('/api/move', {method:'POST', body:fd});
-  out.textContent=await res.text();
+  out.textContent = '처리중...';
+
+  const fd = new FormData(f);
+  const res = await fetch('/api/move', {
+    method: 'POST',
+    body: fd
+  });
+
+  out.textContent = await res.text();
 });
 </script>
 </body>
