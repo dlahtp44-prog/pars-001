@@ -3,59 +3,104 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>PARS WMS 로그인</title>
   <link rel="stylesheet" href="/static/app.css"/>
+  <title>PARS WMS 로그인</title>
+
   <style>
-    body {
-      background: #020617;
+    .tab {
       display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      gap: 6px;
+      margin-bottom: 14px;
     }
-    .login-box {
-      width: 100%;
-      max-width: 360px;
-      background: #020617;
-      border: 1px solid #1f2937;
-      border-radius: 16px;
-      padding: 24px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 12px;
+    .tab button {
+      flex: 1;
+      padding: 10px;
       border-radius: 10px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
+      border: 1px solid #2a2f3a;
+      background: #0f1115;
+      color: #e6e6e6;
+      font-weight: 700;
+      cursor: pointer;
     }
-    button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
+    .tab button.active {
+      background: #202736;
+      border-color: #8ab4ff;
+    }
+    .hidden {
+      display: none;
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #9aa3b5;
+      text-align: center;
     }
   </style>
 </head>
+
 <body>
+<div class="container">
+  <div class="login-box">
 
-<div class="login-box">
-  <h1>PARS WMS</h1>
+    <h1>PARS WMS</h1>
 
-  <form method="post">
-    <input name="username" placeholder="이름" required />
-    <input name="password" type="password" placeholder="비밀번호" required />
-    <button type="submit">로그인</button>
-  </form>
+    <!-- 탭 -->
+    <div class="tab">
+      <button id="tab-login" class="active" onclick="showLogin()">로그인</button>
+      <button id="tab-change" onclick="showChange()">비밀번호 변경</button>
+    </div>
+
+    <!-- =====================
+         로그인
+    ====================== -->
+    <form id="login-form" method="post" action="/login">
+      <label>이름</label>
+      <input name="username" required placeholder="이름 입력"/>
+
+      <label>비밀번호</label>
+      <input type="password" name="password" required placeholder="비밀번호"/>
+
+      <button type="submit">로그인</button>
+    </form>
+
+    <!-- =====================
+         비밀번호 변경
+    ====================== -->
+    <form id="change-form" class="hidden" method="post" action="/login/change">
+      <label>이름</label>
+      <input name="username" required placeholder="이름 입력"/>
+
+      <label>기존 비밀번호</label>
+      <input type="password" name="old_password" required/>
+
+      <label>새 비밀번호</label>
+      <input type="password" name="new_password" required/>
+
+      <button type="submit">비밀번호 변경</button>
+    </form>
+
+    <p class="msg">
+      ⚠️ 비밀번호 변경 후 새 비밀번호로 로그인하세요
+    </p>
+
+  </div>
 </div>
+
+<script>
+function showLogin() {
+  document.getElementById("login-form").classList.remove("hidden");
+  document.getElementById("change-form").classList.add("hidden");
+  document.getElementById("tab-login").classList.add("active");
+  document.getElementById("tab-change").classList.remove("active");
+}
+
+function showChange() {
+  document.getElementById("login-form").classList.add("hidden");
+  document.getElementById("change-form").classList.remove("hidden");
+  document.getElementById("tab-login").classList.remove("active");
+  document.getElementById("tab-change").classList.add("active");
+}
+</script>
 
 </body>
 </html>
