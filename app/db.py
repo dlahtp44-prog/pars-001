@@ -35,6 +35,7 @@ def _add_column_if_not_exists(cur, table: str, column: str, ddl: str):
     if column not in cols:
         cur.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
+
 # =====================================================
 # ADMIN / MAINTENANCE
 # =====================================================
@@ -42,6 +43,7 @@ def _add_column_if_not_exists(cur, table: str, column: str, ddl: str):
 def reset_inventory_and_history():
     """
     ⚠️ 재고 + 이력 전체 초기화 (운영자 전용)
+    - users/login 계정은 절대 삭제하지 않음
     """
     conn = get_db()
     try:
@@ -51,6 +53,8 @@ def reset_inventory_and_history():
         conn.commit()
     finally:
         conn.close()
+
+
 # =====================================================
 # INIT / MIGRATION
 # =====================================================
@@ -82,6 +86,33 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_inventory_key
             ON inventory (warehouse, location, brand, item_code, lot, spec)
         """)
+
+        # =====================
+        # USERS (LOGIN)
+        # =====================
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # ✅ 기본 계정 SEED (없을 때만 생성)
+        default_users = [
+            "양동규",
+            "박상칠",
+            "김광현",
+            "이모세",
+            "인어진",
+            "user1",
+        ]
+        now = datetime.now().isoformat(timespec="seconds")
+        for u in default_users:
+            cur.execute("""
+                INSERT OR IGNORE INTO users (username, password, updated_at)
+                VALUES (?, ?, ?)
+            """, (_norm(u), "1234", now))
 
         # =====================
         # HISTORY
@@ -125,6 +156,7 @@ def init_db() -> None:
             cur, "history", "rollback_note",
             "rollback_note TEXT"
         )
+
         # =====================
         # DAMAGE CODES
         # =====================
@@ -252,7 +284,6 @@ def resolve_inventory_brand_and_name(
         conn.close()
 
 
-
 # =====================================================
 # INVENTORY
 # =====================================================
@@ -300,6 +331,8 @@ def upsert_inventory(
         return True
     finally:
         conn.close()
+
+
 def query_inventory(
     warehouse=None, location=None, brand=None,
     item_code=None, lot=None, spec=None,
@@ -620,6 +653,8 @@ def query_damage_summary_by_category(year=None, month=None):
         return [dict(r) for r in cur.fetchall()]
     finally:
         conn.close()
+
+
 # =====================================================
 # HISTORY QUERY (PAGE / EXCEL 공용)
 # =====================================================
@@ -657,6 +692,3 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
-
-
-
