@@ -8,7 +8,35 @@
 
   <style>
     /* =========================
-       기본 레이아웃 보강
+       헤더 + 로그아웃
+    ========================= */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .logout-btn {
+      font-size: 14px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: #111827;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
+    }
+
+    /* =========================
+       기본 레이아웃
     ========================= */
     .menu-grid {
       display: grid;
@@ -24,27 +52,32 @@
       border-radius: 14px;
     }
 
-    h1 {
-      margin-bottom: 10px;
-    }
-
     /* =========================
        📱 모바일 최적화
     ========================= */
     @media (max-width: 768px) {
 
-      h1 {
-        font-size: 22px;
-        text-align: center;
+      .header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
       }
 
-      /* 메뉴를 1열로 */
+      .header-bar h1 {
+        text-align: center;
+        font-size: 22px;
+      }
+
+      .logout-btn {
+        text-align: center;
+        width: 100%;
+      }
+
       .menu-grid {
         grid-template-columns: 1fr;
         gap: 14px;
       }
 
-      /* 카드 터치 영역 확대 */
       .menu-grid .card {
         font-size: 17px;
         padding: 18px 20px;
@@ -54,13 +87,11 @@
         justify-content: center;
       }
 
-      /* 강조 버튼 더 잘 보이게 */
       .menu-grid .highlight {
         border-width: 2px;
         font-weight: 600;
       }
 
-      /* 하단 설명 가독성 */
       .small {
         font-size: 13px;
         line-height: 1.6;
@@ -74,8 +105,14 @@
 
 <div class="container">
   <div class="card">
-    <h1>PARS WMS v1.6.4-stable</h1>
 
+    <!-- ✅ 헤더 + 로그아웃 -->
+    <div class="header-bar">
+      <h1>PARS WMS v1.6.4-stable</h1>
+      <a href="/logout" class="logout-btn">로그아웃</a>
+    </div>
+
+    <!-- 메뉴 -->
     <div class="menu-grid">
 
       <a class="card" href="/page/inbound">입고</a>
@@ -85,22 +122,13 @@
       <a class="card" href="/page/history">이력</a>
       <a class="card" href="/page/excel">엑셀 센터</a>
 
-      <!-- ✅ 라벨 출력 -->
-      <a class="card" href="/page/labels">
-        🏷️ 라벨 출력
-      </a>
+      <a class="card" href="/page/labels">🏷️ 라벨 출력</a>
 
-      <a class="card highlight" href="/damage">
-        CS / 파손 등록
-      </a>
+      <a class="card highlight" href="/damage">CS / 파손 등록</a>
 
-      <a class="card" href="/page/damage-history">
-        CS 이력
-      </a>
+      <a class="card" href="/page/damage-history">CS 이력</a>
 
-      <a class="card" href="/m">
-        모바일
-      </a>
+      <a class="card" href="/m">모바일</a>
 
     </div>
 
@@ -109,6 +137,7 @@
       ✅ QR 이동: <b>출발 로케이션 → 제품 선택 → 도착 로케이션</b><br/>
       ✅ CS: <b>파손 등록 + 이력 관리</b>
     </p>
+
   </div>
 </div>
 
