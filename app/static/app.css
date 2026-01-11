@@ -55,6 +55,41 @@ a:hover {
 }
 
 /* =====================================================
+   HEADER (MAIN)
+===================================================== */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.header-bar h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+/* 로그아웃 버튼 */
+.logout-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #2a2f3a;
+  background: #171a21;
+  color: #e6e6e6;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.logout-btn:hover {
+  background: #ff6b6b;
+  border-color: #ff6b6b;
+  color: #0f1115;
+  text-decoration: none;
+}
+
+/* =====================================================
    CARD
 ===================================================== */
 .card {
@@ -96,6 +131,16 @@ a:hover {
 .menu-btn:hover {
   filter: brightness(1.1);
   text-decoration: none;
+}
+
+/* 메인 메뉴 카드 UX 보강 */
+.menu-grid .card {
+  cursor: pointer;
+  text-align: center;
+}
+
+.menu-grid .card:hover {
+  filter: brightness(1.08);
 }
 
 /* =====================================================
@@ -177,9 +222,28 @@ th {
 }
 
 /* =====================================================
+   LOGIN PAGE
+===================================================== */
+.login-box {
+  width: 100%;
+  max-width: 360px;
+  background: #171a21;
+  border: 1px solid #2a2f3a;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 0 auto;
+}
+
+.login-box h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* =====================================================
    MOBILE
 ===================================================== */
 @media (max-width: 720px) {
+
   body {
     padding: 10px;
   }
@@ -196,5 +260,23 @@ th {
 
   button {
     padding: 14px;
+  }
+
+  /* 헤더 모바일 대응 */
+  .header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .header-bar h1 {
+    text-align: center;
+    font-size: 20px;
+  }
+
+  .logout-btn {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
   }
 }
