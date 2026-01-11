@@ -15,7 +15,8 @@ SESSION_KEY = "login_user"
 
 def login_user(request: Request, username: str, password: str):
     if USERS.get(username) != password:
-        raise HTTPException(status_code=401, detail="아이디 또는 비밀번호 오류")
+        raise HTTPException(status_code=401, detail="이름 또는 비밀번호 오류")
+
 
     request.session[SESSION_KEY] = username
 
