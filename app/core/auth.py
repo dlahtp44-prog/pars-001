@@ -2,12 +2,12 @@ from fastapi import Request, HTTPException
 
 # ✅ 6인 고정 계정
 USERS = {
+    "양동규": "1234",
+    "박상칠": "1234",
+    "김광현": "1234",
+    "이모세": "1234",
+    "인어진": "1234",
     "user1": "1234",
-    "user2": "1234",
-    "user3": "1234",
-    "user4": "1234",
-    "user5": "1234",
-    "user6": "1234",
 }
 
 SESSION_KEY = "login_user"
