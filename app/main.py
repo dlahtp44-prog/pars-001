@@ -24,8 +24,6 @@ def on_startup():
     init_db()
 
     # 🚨 재배포/재시작 시 재고·이력 리셋 스위치
-    # - 기본값을 '1'로 둬서 "재배포 후에도 데이터가 남는" 문제를 막습니다.
-    # - 데이터 유지가 필요하면 Railway Variables에 RESET_DB=0 을 넣어주세요.
     raw_flag = os.getenv("RESET_DB", "1").strip().lower()
     reset_flag = raw_flag in {"1", "true", "yes", "y", "on"}
 
@@ -69,6 +67,9 @@ from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
 
+# ✅ 📅 PC 달력 페이지
+from app.pages.calendar import router as calendar_page_router
+
 # 로그인 → 메인 순서 중요
 app.include_router(login_router)
 app.include_router(index_router)
@@ -84,6 +85,9 @@ app.include_router(damage_page_router)
 app.include_router(damage_history_page_router)
 app.include_router(labels_page_router)
 
+# ✅ 📅 PC 달력 등록
+app.include_router(calendar_page_router)
+
 # =========================
 # MOBILE
 # =========================
@@ -94,12 +98,18 @@ from app.pages.mobile_inventory_detail import router as mobile_inventory_detail_
 from app.pages.mobile_move import router as mobile_move_router
 from app.pages.mobile_cs import router as mobile_cs_router
 
+# ✅ 📅 모바일 달력 페이지
+from app.pages.mobile_calendar import router as mobile_calendar_router
+
 app.include_router(mobile_home_router)
 app.include_router(mobile_qr_router)
 app.include_router(mobile_qr_inventory_router)
 app.include_router(mobile_inventory_detail_router)
 app.include_router(mobile_move_router)
 app.include_router(mobile_cs_router)
+
+# ✅ 📅 모바일 달력 등록
+app.include_router(mobile_calendar_router)
 
 # =========================
 # API
@@ -114,8 +124,8 @@ from app.routers.api_damage_codes import router as api_damage_codes_router
 from app.routers.excel_inbound import router as api_excel_inbound_router
 from app.routers.excel_outbound import router as api_excel_outbound_router
 from app.routers.api_labels import router as api_labels_router
-from app.routers.api_admin import router as api_admin_router  # ✅ 초기화 API
-from app.routers.api_rollback import router as api_rollback_router  # ✅ 롤백 API
+from app.routers.api_admin import router as api_admin_router   # 초기화 API
+from app.routers.api_rollback import router as api_rollback_router  # 롤백 API
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -127,5 +137,5 @@ app.include_router(api_damage_codes_router)
 app.include_router(api_excel_inbound_router)
 app.include_router(api_excel_outbound_router)
 app.include_router(api_labels_router)
-app.include_router(api_admin_router)  # ✅ 재고/이력 수동 초기화
-app.include_router(api_rollback_router)  # ✅ 롤백
+app.include_router(api_admin_router)
+app.include_router(api_rollback_router)
