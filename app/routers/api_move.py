@@ -5,10 +5,15 @@ from app.db import (
     add_history,
     resolve_inventory_brand_and_name,
     upsert_inventory,
+    rollback_history,
 )
 
 router = APIRouter(prefix="/api/move", tags=["move"])
 
+
+# =====================================================
+# UTILS
+# =====================================================
 
 def normalize_qty(value) -> float:
     """
@@ -21,8 +26,15 @@ def normalize_qty(value) -> float:
         )
         return float(d)
     except Exception:
-        raise HTTPException(status_code=400, detail="수량 형식이 올바르지 않습니다.")
+        raise HTTPException(
+            status_code=400,
+            detail="수량 형식이 올바르지 않습니다."
+        )
 
+
+# =====================================================
+# 이동 처리
+# =====================================================
 
 @router.post("")
 def move(
@@ -39,22 +51,28 @@ def move(
     operator: str = Form(""),
 ):
     """
-    ✅ 이동 처리 (소수점 3자리 지원)
+    ✅ 이동 처리
+    - 소수점 3자리 수량 지원
     - 출발지 재고 부족 시 차단
-    - 성공 시 history에 '이동' 기록
-    - 브랜드 미입력 시 출발지 현재고에서 자동 보정(후보 1개일 때만)
+    - 출발/도착 동일 로케이션 차단
+    - history에 '이동' 기록
     """
 
-    # ✅ 수량 정규화
     qty_norm = normalize_qty(qty)
 
     if qty_norm <= 0:
-        raise HTTPException(status_code=400, detail="이동 수량은 0보다 커야 합니다.")
+        raise HTTPException(
+            status_code=400,
+            detail="이동 수량은 0보다 커야 합니다."
+        )
 
     if from_location.strip() == to_location.strip():
-        raise HTTPException(status_code=400, detail="출발/도착 로케이션이 동일합니다.")
+        raise HTTPException(
+            status_code=400,
+            detail="출발/도착 로케이션이 동일합니다."
+        )
 
-    # 브랜드/품명 자동 보정 (출발지 기준)
+    # 1️⃣ 브랜드 / 품명 자동 보정 (출발지 기준)
     try:
         resolved_brand, resolved_name = resolve_inventory_brand_and_name(
             warehouse=warehouse,
@@ -65,12 +83,15 @@ def move(
             brand=brand,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
     final_brand = resolved_brand or (brand or "")
     final_name = item_name or resolved_name or ""
 
-    # 1️⃣ 출발지 차감
+    # 2️⃣ 출발지 차감
     ok = upsert_inventory(
         warehouse=warehouse,
         location=from_location,
@@ -83,9 +104,12 @@ def move(
         note=note,
     )
     if not ok:
-        raise HTTPException(status_code=400, detail="출발지 재고가 부족하여 이동할 수 없습니다.")
+        raise HTTPException(
+            status_code=400,
+            detail="출발지 재고가 부족하여 이동할 수 없습니다."
+        )
 
-    # 2️⃣ 도착지 가산
+    # 3️⃣ 도착지 가산
     upsert_inventory(
         warehouse=warehouse,
         location=to_location,
@@ -98,7 +122,7 @@ def move(
         note=note,
     )
 
-    # 3️⃣ 이력 기록
+    # 4️⃣ 이력 기록
     add_history(
         type="이동",
         warehouse=warehouse,
@@ -116,5 +140,47 @@ def move(
 
     return {
         "ok": True,
+        "type": "이동",
         "qty": qty_norm,
+    }
+
+
+# =====================================================
+# 이동 롤백
+# =====================================================
+
+@router.post("/rollback")
+def move_rollback(
+    history_id: int = Form(...),
+    operator: str = Form(""),
+    note: str = Form(""),
+):
+    """
+    🔁 이동 롤백
+    - history 기준
+    - 도착지 차감 + 출발지 원복
+    - 롤백 이력 history에 자동 기록
+    """
+
+    try:
+        rollback_history(
+            history_id=history_id,
+            operator=operator,
+            note=note,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="이동 롤백 처리 중 오류가 발생했습니다."
+        )
+
+    return {
+        "ok": True,
+        "type": "이동 롤백",
+        "history_id": history_id,
     }
