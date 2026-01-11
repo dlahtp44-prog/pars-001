@@ -3,7 +3,7 @@ import openpyxl
 import io
 
 from app.db import upsert_inventory, add_history
-from app.utils.excel_kor_columns import build_col_index, validate_required
+from app.utils.excel_kor_columns import build_col_index
 
 
 router = APIRouter(prefix="/api/excel/inbound", tags=["excel-inbound"])
@@ -29,6 +29,9 @@ async def excel_inbound(
       - LOT
       - 규격
       - 비고
+
+    📌 수량이 0 / 음수 / 빈값인 행은
+       에러 ❌ → 자동 스킵 ⭕
     """
 
     if not file.filename.lower().endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
@@ -61,6 +64,7 @@ async def excel_inbound(
 
     success = 0
     fail = 0
+    skipped = 0
     errors = []
 
     # ===============================
@@ -70,12 +74,14 @@ async def excel_inbound(
         ws.iter_rows(min_row=2, values_only=True),
         start=2
     ):
-        # 빈 행 스킵
+        # 완전 빈 행 스킵
         if row is None or all(v is None or str(v).strip() == "" for v in row):
             continue
 
         try:
+            # ===============================
             # 필수
+            # ===============================
             warehouse = str(row[idx["창고"]] or "").strip()
             location = str(row[idx["로케이션"]] or "").strip()
             item_code = str(row[idx["품번"]] or "").strip()
@@ -92,14 +98,23 @@ async def excel_inbound(
             if not (warehouse and location and item_code):
                 raise ValueError("필수 값(창고/로케이션/품번) 누락")
 
-            # 수량 검증
+            # ===============================
+            # 수량 처리 (핵심 수정 부분)
+            # ===============================
+            if qty_raw is None or str(qty_raw).strip() == "":
+                skipped += 1
+                continue
+
             try:
                 qty = int(qty_raw)
             except Exception:
-                raise ValueError("수량 형식 오류")
+                skipped += 1
+                continue
 
             if qty <= 0:
-                raise ValueError("수량은 1 이상")
+                # ❌ 에러 아님 → 자동 스킵
+                skipped += 1
+                continue
 
             # ===============================
             # INVENTORY
@@ -148,6 +163,7 @@ async def excel_inbound(
     return {
         "ok": True,
         "success": success,
+        "skipped": skipped,
         "fail": fail,
         "errors": errors[:50],  # 너무 길어지지 않게
     }
