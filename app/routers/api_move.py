@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Form, HTTPException
+from decimal import Decimal, ROUND_HALF_UP
 
 from app.db import (
     add_history,
@@ -7,6 +8,20 @@ from app.db import (
 )
 
 router = APIRouter(prefix="/api/move", tags=["move"])
+
+
+def normalize_qty(value) -> float:
+    """
+    수량을 소수점 3자리까지 반올림하여 float로 반환
+    """
+    try:
+        d = Decimal(str(value)).quantize(
+            Decimal("0.000"),
+            rounding=ROUND_HALF_UP
+        )
+        return float(d)
+    except Exception:
+        raise HTTPException(status_code=400, detail="수량 형식이 올바르지 않습니다.")
 
 
 @router.post("")
@@ -24,13 +39,18 @@ def move(
     operator: str = Form(""),
 ):
     """
-    ✅ 이동 처리
+    ✅ 이동 처리 (소수점 3자리 지원)
     - 출발지 재고 부족 시 차단
     - 성공 시 history에 '이동' 기록
     - 브랜드 미입력 시 출발지 현재고에서 자동 보정(후보 1개일 때만)
     """
-    if qty is None or float(qty) <= 0:
-        raise HTTPException(status_code=400, detail="이동 수량은 1 이상이어야 합니다.")
+
+    # ✅ 수량 정규화
+    qty_norm = normalize_qty(qty)
+
+    if qty_norm <= 0:
+        raise HTTPException(status_code=400, detail="이동 수량은 0보다 커야 합니다.")
+
     if from_location.strip() == to_location.strip():
         raise HTTPException(status_code=400, detail="출발/도착 로케이션이 동일합니다.")
 
@@ -50,7 +70,7 @@ def move(
     final_brand = resolved_brand or (brand or "")
     final_name = item_name or resolved_name or ""
 
-    # 1) 출발지 차감
+    # 1️⃣ 출발지 차감
     ok = upsert_inventory(
         warehouse=warehouse,
         location=from_location,
@@ -59,13 +79,13 @@ def move(
         item_name=final_name,
         lot=lot,
         spec=spec,
-        qty_delta=-float(qty),
+        qty_delta=-qty_norm,
         note=note,
     )
     if not ok:
         raise HTTPException(status_code=400, detail="출발지 재고가 부족하여 이동할 수 없습니다.")
 
-    # 2) 도착지 가산
+    # 2️⃣ 도착지 가산
     upsert_inventory(
         warehouse=warehouse,
         location=to_location,
@@ -74,11 +94,11 @@ def move(
         item_name=final_name,
         lot=lot,
         spec=spec,
-        qty_delta=float(qty),
+        qty_delta=qty_norm,
         note=note,
     )
 
-    # 3) 이력 기록
+    # 3️⃣ 이력 기록
     add_history(
         type="이동",
         warehouse=warehouse,
@@ -90,8 +110,11 @@ def move(
         spec=spec,
         from_location=from_location,
         to_location=to_location,
-        qty=float(qty),
+        qty=qty_norm,
         note=note,
     )
 
-    return {"ok": True}
+    return {
+        "ok": True,
+        "qty": qty_norm,
+    }
