@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+import os
 
 from app.core.paths import STATIC_DIR
-from app.db import init_db
+from app.db import init_db, reset_inventory_and_history
 
 app = FastAPI(
     title="PARS WMS",
@@ -15,14 +16,26 @@ app = FastAPI(
 # =========================
 @app.on_event("startup")
 def on_startup():
+    """
+    서버 시작 시:
+    1. DB 구조 보장 (init_db)
+    2. RESET_DB=1 인 경우에만 재고/이력 초기화
+    """
     init_db()
+
+    # 🚨 재배포 초기화 스위치 (Railway ENV)
+    if os.getenv("RESET_DB") == "1":
+        print("⚠ RESET_DB=1 → inventory / history 초기화 실행")
+        reset_inventory_and_history()
+    else:
+        print("ℹ RESET_DB not set → 데이터 유지")
 
 # =========================
 # SESSION (로그인용)
 # =========================
 app.add_middleware(
     SessionMiddleware,
-    secret_key="pars-wms-secret-key",  # 내부용
+    secret_key="pars-wms-secret-key",
 )
 
 # =========================
@@ -51,7 +64,8 @@ from app.pages.damage import router as damage_page_router
 from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
 
-app.include_router(login_router)      # 로그인 먼저
+# 로그인 → 메인 순서 중요
+app.include_router(login_router)
 app.include_router(index_router)
 app.include_router(inbound_page_router)
 app.include_router(outbound_page_router)
@@ -95,7 +109,7 @@ from app.routers.api_damage_codes import router as api_damage_codes_router
 from app.routers.excel_inbound import router as api_excel_inbound_router
 from app.routers.excel_outbound import router as api_excel_outbound_router
 from app.routers.api_labels import router as api_labels_router
-from app.routers.api_admin import router as api_admin_router  # ✅ 추가
+from app.routers.api_admin import router as api_admin_router  # ✅ 초기화 API
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -107,4 +121,4 @@ app.include_router(api_damage_codes_router)
 app.include_router(api_excel_inbound_router)
 app.include_router(api_excel_outbound_router)
 app.include_router(api_labels_router)
-app.include_router(api_admin_router)  # ✅ 재고/이력 초기화
+app.include_router(api_admin_router)  # ✅ 재고/이력 수동 초기화
