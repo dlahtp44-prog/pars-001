@@ -642,17 +642,21 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
-        def reset_inventory_and_history():
+
+
+# =====================================================
+# ADMIN / MAINTENANCE
+# =====================================================
+
+def reset_inventory_and_history():
+    """
+    ⚠️ 재고 + 이력 전체 초기화 (운영자 전용)
+    """
     conn = get_db()
     try:
         cur = conn.cursor()
-
-        # 재고 초기화
         cur.execute("DELETE FROM inventory")
-
-        # 이력 초기화
         cur.execute("DELETE FROM history")
-
         conn.commit()
     finally:
         conn.close()
