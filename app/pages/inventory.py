@@ -4,10 +4,23 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.paths import TEMPLATES_DIR
 from app.db import query_inventory
+from app.core.qty import display_qty
 from app.utils.excel_export import rows_to_xlsx_bytes
 
 router = APIRouter(prefix="/page/inventory", tags=["page-inventory"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def _format_rows(rows):
+    """
+    화면/엑셀 공용 수량 표시 포맷 적용
+    """
+    view_rows = []
+    for r in rows:
+        d = dict(r)
+        d["qty"] = display_qty(d.get("qty"))
+        view_rows.append(d)
+    return view_rows
 
 
 @router.get("", response_class=HTMLResponse)
@@ -29,11 +42,13 @@ def page(
         spec=spec,
     )
 
+    view_rows = _format_rows(rows)
+
     return templates.TemplateResponse(
         "inventory.html",
         {
             "request": request,
-            "rows": rows,
+            "rows": view_rows,
             "warehouse": warehouse,
             "location": location,
             "brand": brand,
@@ -62,6 +77,8 @@ def download_excel(
         spec=spec,
     )
 
+    view_rows = _format_rows(rows)
+
     columns = [
         ("warehouse", "창고"),
         ("location", "로케이션"),
@@ -75,7 +92,11 @@ def download_excel(
         ("updated_at", "수정일시"),
     ]
 
-    data = rows_to_xlsx_bytes(rows, columns, sheet_name="재고현황")
+    data = rows_to_xlsx_bytes(
+        view_rows,
+        columns,
+        sheet_name="재고현황",
+    )
 
     return StreamingResponse(
         iter([data]),
