@@ -4,25 +4,37 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="/static/app.css"/>
-  <title>이력현황</title>
+  <title>이력조회</title>
 
   <style>
+    /* 메시지 영역 */
     .msg {
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
       display: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-weight: 600;
     }
     .msg.success {
-      background: #1e7f43;
-      color: #fff;
+      background: #1f6f43;
+      color: #eafff3;
     }
     .msg.error {
-      background: #b3342b;
-      color: #fff;
+      background: #7a1f1f;
+      color: #ffecec;
     }
-    .btn.rollback.done {
-      background: #555;
+
+    .btn.rollback {
+      background: #c0392b;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn.rollback:disabled {
+      opacity: 0.5;
       cursor: not-allowed;
     }
   </style>
@@ -33,91 +45,151 @@
   <div class="card">
     <h2>이력현황</h2>
 
+    <!-- 메시지 영역 -->
     <div id="msg-success" class="msg success"></div>
     <div id="msg-error" class="msg error"></div>
 
-    <form method="get">
+    <!-- 검색 -->
+    <form method="get" action="/page/history">
       <div class="grid2">
-        <input name="year" placeholder="년" value="{{year}}">
-        <input name="month" placeholder="월" value="{{month}}">
-        <input name="day" placeholder="일" value="{{day}}">
-        <input name="limit" placeholder="limit" value="{{limit}}">
+        <div>
+          <label>년(YYYY)</label>
+          <input name="year" value="{{year}}" placeholder="예: 2026"/>
+        </div>
+        <div>
+          <label>월(MM)</label>
+          <input name="month" value="{{month}}" placeholder="예: 1"/>
+        </div>
+        <div>
+          <label>일(DD)</label>
+          <input name="day" value="{{day}}" placeholder="예: 2"/>
+        </div>
+        <div>
+          <label>표시개수(limit)</label>
+          <input name="limit" value="{{limit}}" placeholder="예: 300"/>
+        </div>
       </div>
-      <button class="btn">검색</button>
+
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="btn" type="submit">검색</button>
+        <a class="btn" href="/page/history/excel?year={{year}}&month={{month}}&day={{day}}">
+          엑셀 다운로드
+        </a>
+        <a class="btn secondary" href="/">메인</a>
+      </div>
     </form>
 
-    <table>
-      <thead>
+    <!-- 테이블 -->
+    <div style="overflow:auto; margin-top:14px;">
+      <table>
+        <thead>
         <tr>
-          <th>시간</th><th>유형</th><th>출발</th><th>도착</th>
-          <th>품번</th><th>LOT</th><th>수량</th>
-          <th>작업자</th><th>롤백</th>
+          <th class="small">시간</th>
+          <th>유형</th>
+          <th>창고</th>
+          <th>출발</th>
+          <th>도착</th>
+          <th>브랜드</th>
+          <th>품번</th>
+          <th>품명</th>
+          <th>LOT</th>
+          <th>규격</th>
+          <th style="text-align:right;">수량</th>
+          <th>비고</th>
+          <th>작업자</th>
+          <th>롤백</th>
         </tr>
-      </thead>
-      <tbody>
-      {% for r in rows %}
+        </thead>
+        <tbody>
+        {% for r in rows %}
         <tr id="row-{{r.id}}">
-          <td>{{r.created_at}}</td>
+          <td class="small">{{r.created_at}}</td>
           <td>{{r.type}}</td>
+          <td>{{r.warehouse}}</td>
           <td>{{r.from_location}}</td>
           <td>{{r.to_location}}</td>
+          <td>{{r.brand}}</td>
           <td>{{r.item_code}}</td>
+          <td>{{r.item_name}}</td>
           <td>{{r.lot}}</td>
-          <td style="text-align:right">{{r.qty}}</td>
+          <td>{{r.spec}}</td>
+          <td style="text-align:right;">{{r.qty}}</td>
+          <td>{{r.note}}</td>
           <td>{{r.operator}}</td>
           <td>
             {% if r.can_rollback %}
-              <button class="btn rollback"
-                      onclick="doRollback({{r.id}}, this)">
+              <button
+                class="btn rollback"
+                onclick="doRollback({{r.id}}, this)">
                 롤백
               </button>
             {% else %}
-              <button class="btn rollback done" disabled>완료</button>
+              <span class="small muted">-</span>
             {% endif %}
           </td>
         </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="small" style="margin-top:10px;">
+      ※ 입고 / 출고 / 이동 이력만 롤백 가능하며, 롤백 시 재고는 자동 원복됩니다.
+    </p>
   </div>
 </div>
 
 <script>
-async function doRollback(historyId, btn) {
-  if (!confirm("정말 롤백하시겠습니까?")) return;
+function showMsg(type, text) {
+  const ok = document.getElementById("msg-success");
+  const err = document.getElementById("msg-error");
+  ok.style.display = "none";
+  err.style.display = "none";
 
-  const res = await fetch("/api/rollback", {
-    method: "POST",
-    headers: {"Content-Type": "application/x-www-form-urlencoded"},
-    body: new URLSearchParams({
-      history_id: historyId,
-      operator: "관리자",
-      note: "이력 화면 롤백"
-    })
-  });
-
-  const data = await res.json();
-
-  if (res.ok && data.ok) {
-    showMsg("success", "롤백이 완료되었습니다.");
-    btn.textContent = "완료";
-    btn.classList.add("done");
-    btn.disabled = true;
+  if (type === "success") {
+    ok.textContent = text;
+    ok.style.display = "block";
   } else {
-    showMsg("error", data.detail || "롤백 실패");
+    err.textContent = text;
+    err.style.display = "block";
   }
 }
 
-function showMsg(type, text) {
-  document.getElementById("msg-success").style.display = "none";
-  document.getElementById("msg-error").style.display = "none";
+async function doRollback(historyId, btn) {
+  if (!confirm("정말 이 이력을 롤백하시겠습니까?")) return;
 
-  const el = document.getElementById(
-    type === "success" ? "msg-success" : "msg-error"
-  );
-  el.textContent = text;
-  el.style.display = "block";
+  const note = prompt("롤백 사유를 입력하세요 (선택)") || "";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/rollback", {
+      method: "POST",
+      headers: {"Content-Type": "application/x-www-form-urlencoded"},
+      body: new URLSearchParams({
+        history_id: historyId,
+        note: note
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data.detail || "롤백 실패");
+    }
+
+    showMsg("success", "롤백이 성공적으로 완료되었습니다.");
+
+    // UI 즉시 반영
+    btn.remove();
+    const cell = document.querySelector(`#row-${historyId} td:last-child`);
+    if (cell) cell.innerHTML = '<span class="small muted">완료</span>';
+
+  } catch (e) {
+    showMsg("error", e.message);
+    btn.disabled = false;
+  }
 }
 </script>
+
 </body>
 </html>
