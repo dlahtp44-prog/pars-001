@@ -35,7 +35,22 @@ def _add_column_if_not_exists(cur, table: str, column: str, ddl: str):
     if column not in cols:
         cur.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
+# =====================================================
+# ADMIN / MAINTENANCE
+# =====================================================
 
+def reset_inventory_and_history():
+    """
+    ⚠️ 재고 + 이력 전체 초기화 (운영자 전용)
+    """
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM inventory")
+        cur.execute("DELETE FROM history")
+        conn.commit()
+    finally:
+        conn.close()
 # =====================================================
 # INIT / MIGRATION
 # =====================================================
@@ -644,20 +659,4 @@ def query_history(
         conn.close()
 
 
-# =====================================================
-# ADMIN / MAINTENANCE
-# =====================================================
-
-def reset_inventory_and_history():
-    """
-    ⚠️ 재고 + 이력 전체 초기화 (운영자 전용)
-    """
-    conn = get_db()
-    try:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM inventory")
-        cur.execute("DELETE FROM history")
-        conn.commit()
-    finally:
-        conn.close()
 
