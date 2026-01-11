@@ -20,26 +20,37 @@ def rollback(
     - 이동
 
     동작:
-    - 재고 원복
-    - 원본 history rolled_back = 1
-    - rollback_at / rollback_by / rollback_note 기록
-    - history에 type='롤백' 이력 추가
+    1. history 단건 조회 (rolled_back=0 조건)
+    2. 재고 원복
+    3. 원본 history rolled_back = 1
+       - rollback_at
+       - rollback_by
+       - rollback_note 기록
+    4. history에 type='롤백' 이력 추가
     """
+
+    if history_id <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="유효하지 않은 history_id 입니다.",
+        )
 
     try:
         rollback_history(
             history_id=history_id,
-            operator=operator,
-            note=note,
+            operator=operator.strip(),
+            note=note.strip(),
         )
+
     except ValueError as e:
-        # ❌ 이미 롤백되었거나 대상 아님
+        # ❌ 이미 롤백되었거나 대상이 아닌 이력
         raise HTTPException(
-            status_code=400,
+            status_code=409,  # Conflict
             detail=str(e),
         )
-    except Exception:
-        # ❌ 시스템 오류
+
+    except Exception as e:
+        # ❌ 시스템 오류 (DB / 로직 / 트랜잭션)
         raise HTTPException(
             status_code=500,
             detail="롤백 처리 중 오류가 발생했습니다.",
