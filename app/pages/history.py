@@ -25,13 +25,25 @@ def _to_int(v: str | None):
 
 def _format_rows(rows):
     """
-    화면/엑셀 공용 수량 표시 포맷 적용
+    화면/엑셀 공용 포맷
+    - 수량: 소수점 3자리 표시
+    - 롤백 가능 여부 계산
     """
     view_rows = []
     for r in rows:
         d = dict(r)
+
+        # ✅ 수량 포맷 통일
         d["qty"] = display_qty(d.get("qty"))
+
+        # ✅ 롤백 가능 여부
+        d["can_rollback"] = (
+            d.get("type") in ("입고", "출고", "이동")
+            and not d.get("rolled_back", 0)
+        )
+
         view_rows.append(d)
+
     return view_rows
 
 
@@ -95,6 +107,10 @@ def download_excel(
         ("qty", "수량"),
         ("note", "비고"),
         ("operator", "작업자"),
+        ("rolled_back", "롤백여부"),
+        ("rollback_at", "롤백시간"),
+        ("rollback_by", "롤백작업자"),
+        ("rollback_note", "롤백사유"),
     ]
 
     data = rows_to_xlsx_bytes(
