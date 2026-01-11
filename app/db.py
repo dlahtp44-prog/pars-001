@@ -20,11 +20,20 @@ def get_db() -> sqlite3.Connection:
 def _q3(val) -> float:
     if val is None:
         return 0.0
-    return float(Decimal(str(val)).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP))
+    return float(Decimal(str(val)).quantize(
+        Decimal("0.000"), rounding=ROUND_HALF_UP
+    ))
 
 
 def _norm(v: Optional[str]) -> str:
     return (v or "").strip()
+
+
+def _add_column_if_not_exists(cur, table: str, column: str, ddl: str):
+    cur.execute(f"PRAGMA table_info({table})")
+    cols = [r["name"] for r in cur.fetchall()]
+    if column not in cols:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
 
 # =====================================================
@@ -84,6 +93,23 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
         )
 
+        # 🔥 롤백 컬럼 마이그레이션 (운영 안전판)
+        _add_column_if_not_exists(
+            cur, "history", "rolled_back",
+            "rolled_back INTEGER NOT NULL DEFAULT 0"
+        )
+        _add_column_if_not_exists(
+            cur, "history", "rollback_at",
+            "rollback_at TEXT"
+        )
+        _add_column_if_not_exists(
+            cur, "history", "rollback_by",
+            "rollback_by TEXT"
+        )
+        _add_column_if_not_exists(
+            cur, "history", "rollback_note",
+            "rollback_note TEXT"
+        )
         # =====================
         # DAMAGE CODES
         # =====================
@@ -125,12 +151,11 @@ def init_db() -> None:
         """)
 
         # =====================
-        # DAMAGE CODE SEED (🔥 안정판)
+        # DAMAGE CODE SEED (안정판)
         # =====================
         cur.execute("DELETE FROM damage_codes")
 
         damage_seed = [
-            # 물류
             ("물류", "수작업", "이동", "수작업 이동 중 파손"),
             ("물류", "수작업", "낙하", "수작업 중 낙하"),
             ("물류", "수작업", "충격", "수작업 중 외부 충격"),
@@ -141,37 +166,25 @@ def init_db() -> None:
             ("물류", "보관", "허용 하중 초과", "허용 하중 초과"),
             ("물류", "보관", "장기 적재", "장기 보관 중 파손"),
             ("물류", "기타", "원인 불명", "원인 미확인"),
-
-            # 사옥
             ("사옥", "수작업", "이동", "사옥 내 이동 중 파손"),
             ("사옥", "수작업", "낙하", "사옥 내 낙하"),
             ("사옥", "수작업", "충격", "사옥 내 충격"),
             ("사옥", "보관", "적재 기준 미준수", "사옥 보관 중 적재 불량"),
-
-            # 운송
             ("운송", "하차", "부주의", "하차 작업 중 부주의"),
             ("운송", "하차", "충격", "하차 중 충격"),
             ("운송", "운송", "사고", "운송 중 사고"),
             ("운송", "운송", "적재 불량", "차량 적재 불량"),
-
-            # 하차지
             ("하차지", "수작업", "이동", "하차지 이동 중 파손"),
             ("하차지", "수작업", "낙하", "하차지 낙하"),
             ("하차지", "지게차", "충격", "하차지 지게차 충돌"),
             ("하차지", "보관", "적재 기준 미준수", "하차지 보관 중 적재 불량"),
             ("하차지", "기타", "원인 불명", "하차지 원인 미확인"),
-
-            # 가공공장
             ("가공공장", "제품", "재단 불량", "재단 작업 중 불량"),
             ("가공공장", "제품", "제품 파손", "가공 중 제품 파손"),
             ("가공공장", "제품", "색상 불량", "색상 불량"),
             ("가공공장", "기타", "재단 불량", "기타 재단 불량"),
-
-            # 원자재
             ("원자재", "생산", "출격 불량", "생산 공정 불량"),
             ("원자재", "생산", "적재 불량", "원자재 적재 불량"),
-
-            # 부상
             ("부상", "지게차", "충격", "지게차 작업 중 부상"),
         ]
 
@@ -181,7 +194,6 @@ def init_db() -> None:
         """, damage_seed)
 
         conn.commit()
-
     finally:
         conn.close()
 
@@ -225,42 +237,10 @@ def resolve_inventory_brand_and_name(
         conn.close()
 
 
+
 # =====================================================
 # INVENTORY
 # =====================================================
-
-def query_inventory(
-    warehouse=None, location=None, brand=None,
-    item_code=None, lot=None, spec=None,
-    limit: int = 500
-) -> List[Dict[str, Any]]:
-    conn = get_db()
-    try:
-        cur = conn.cursor()
-        where, params = ["qty > 0"], []
-
-        if warehouse:
-            where.append("warehouse LIKE ?"); params.append(f"%{_norm(warehouse)}%")
-        if location:
-            where.append("location LIKE ?"); params.append(f"%{_norm(location)}%")
-        if brand:
-            where.append("brand = ?"); params.append(_norm(brand))
-        if item_code:
-            where.append("item_code LIKE ?"); params.append(f"%{_norm(item_code)}%")
-        if lot:
-            where.append("lot LIKE ?"); params.append(f"%{_norm(lot)}%")
-        if spec:
-            where.append("spec LIKE ?"); params.append(f"%{_norm(spec)}%")
-
-        sql = "SELECT * FROM inventory WHERE " + " AND ".join(where)
-        sql += " ORDER BY updated_at DESC LIMIT ?"
-        params.append(limit)
-
-        cur.execute(sql, params)
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        conn.close()
-
 
 def upsert_inventory(
     warehouse, location, brand, item_code, item_name,
@@ -349,37 +329,97 @@ def add_history(
         conn.close()
 
 
-def query_history(year=None, month=None, day=None, limit=500):
+# =====================================================
+# ROLLBACK
+# =====================================================
+
+def rollback_history(history_id: int, operator: str, note: str = ""):
+    """
+    입고 / 출고 / 이동 롤백
+    """
     conn = get_db()
     try:
         cur = conn.cursor()
-        where, params = [], []
+        now = datetime.now().isoformat(timespec="seconds")
 
-        if year and month:
-            pat = f"{int(year):04d}-{int(month):02d}"
-            if day:
-                pat += f"-{int(day):02d}"
-            where.append("created_at LIKE ?")
-            params.append(f"{pat}%")
-        elif year:
-            where.append("created_at LIKE ?")
-            params.append(f"{int(year):04d}%")
+        cur.execute(
+            "SELECT * FROM history WHERE id=? AND rolled_back=0",
+            (history_id,)
+        )
+        h = cur.fetchone()
+        if not h:
+            raise ValueError("이미 롤백되었거나 존재하지 않는 이력입니다.")
 
-        sql = """
-            SELECT h.*,
-            CASE
-                WHEN h.type='입고' THEN h.to_location
-                ELSE h.from_location
-            END AS location
-            FROM history h
-        """
-        if where:
-            sql += " WHERE " + " AND ".join(where)
-        sql += " ORDER BY h.created_at DESC LIMIT ?"
-        params.append(limit)
+        if h["type"] not in ("입고", "출고", "이동"):
+            raise ValueError("롤백 대상이 아닌 이력입니다.")
 
-        cur.execute(sql, params)
-        return [dict(r) for r in cur.fetchall()]
+        qty = _q3(h["qty"])
+
+        if h["type"] == "입고":
+            ok = upsert_inventory(
+                h["warehouse"], h["to_location"], h["brand"],
+                h["item_code"], h["item_name"],
+                h["lot"], h["spec"],
+                -qty, note="입고 롤백"
+            )
+        elif h["type"] == "출고":
+            ok = upsert_inventory(
+                h["warehouse"], h["from_location"], h["brand"],
+                h["item_code"], h["item_name"],
+                h["lot"], h["spec"],
+                qty, note="출고 롤백"
+            )
+        else:
+            ok1 = upsert_inventory(
+                h["warehouse"], h["to_location"], h["brand"],
+                h["item_code"], h["item_name"],
+                h["lot"], h["spec"],
+                -qty, note="이동 롤백"
+            )
+            ok2 = upsert_inventory(
+                h["warehouse"], h["from_location"], h["brand"],
+                h["item_code"], h["item_name"],
+                h["lot"], h["spec"],
+                qty, note="이동 롤백"
+            )
+            ok = ok1 and ok2
+
+        if not ok:
+            raise ValueError("재고 롤백 실패")
+
+        cur.execute("""
+            UPDATE history
+            SET rolled_back=1,
+                rollback_at=?,
+                rollback_by=?,
+                rollback_note=?
+            WHERE id=?
+        """, (now, _norm(operator), _norm(note), history_id))
+
+        cur.execute("""
+            INSERT INTO history
+            (type, warehouse, operator, brand,
+             item_code, item_name, lot, spec,
+             from_location, to_location,
+             qty, note, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "롤백",
+            h["warehouse"],
+            _norm(operator),
+            h["brand"],
+            h["item_code"],
+            h["item_name"],
+            h["lot"],
+            h["spec"],
+            h["to_location"],
+            h["from_location"],
+            qty,
+            f"원본ID:{h['id']} {note}",
+            now
+        ))
+
+        conn.commit()
     finally:
         conn.close()
 
