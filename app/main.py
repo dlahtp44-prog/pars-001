@@ -23,12 +23,17 @@ def on_startup():
     """
     init_db()
 
-    # 🚨 재배포 초기화 스위치 (Railway ENV)
-    if os.getenv("RESET_DB") == "1":
-        print("⚠ RESET_DB=1 → inventory / history 초기화 실행")
+    # 🚨 재배포/재시작 시 재고·이력 리셋 스위치
+    # - 기본값을 '1'로 둬서 "재배포 후에도 데이터가 남는" 문제를 막습니다.
+    # - 데이터 유지가 필요하면 Railway Variables에 RESET_DB=0 을 넣어주세요.
+    raw_flag = os.getenv("RESET_DB", "1").strip().lower()
+    reset_flag = raw_flag in {"1", "true", "yes", "y", "on"}
+
+    if reset_flag:
+        print(f"⚠ RESET_DB={raw_flag} → inventory/history 초기화 실행")
         reset_inventory_and_history()
     else:
-        print("ℹ RESET_DB not set → 데이터 유지")
+        print(f"ℹ RESET_DB={raw_flag} → 데이터 유지")
 
 # =========================
 # SESSION (로그인용)
@@ -110,6 +115,7 @@ from app.routers.excel_inbound import router as api_excel_inbound_router
 from app.routers.excel_outbound import router as api_excel_outbound_router
 from app.routers.api_labels import router as api_labels_router
 from app.routers.api_admin import router as api_admin_router  # ✅ 초기화 API
+from app.routers.api_rollback import router as api_rollback_router  # ✅ 롤백 API
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -122,3 +128,4 @@ app.include_router(api_excel_inbound_router)
 app.include_router(api_excel_outbound_router)
 app.include_router(api_labels_router)
 app.include_router(api_admin_router)  # ✅ 재고/이력 수동 초기화
+app.include_router(api_rollback_router)  # ✅ 롤백
