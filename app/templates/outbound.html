@@ -5,6 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="/static/app.css"/>
   <title>출고 | PARS WMS</title>
+
+  <style>
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 50;
+    }
+    .dropdown-item {
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .dropdown-item:hover {
+      background: #2563eb;
+      color: #fff;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
@@ -25,25 +55,29 @@
       <input name="operator" type="text" placeholder="예: 홍길동" required>
 
       <label>로케이션</label>
-      <input name="location" type="text" placeholder="예: B01-01-02-A" required>
+      <input id="location" name="location" type="text" required>
 
       <label>브랜드</label>
-      <input name="brand" type="text" placeholder="예: Buildtech">
+      <input id="brand" name="brand" type="text">
 
       <label>품번</label>
-      <input name="item_code" type="text" required>
+      <div class="dropdown">
+        <input id="item_code" name="item_code" type="text" autocomplete="off" required>
+        <div id="dropdown" class="dropdown-list hidden"></div>
+      </div>
 
       <label>품명</label>
-      <input name="item_name" type="text">
+      <input id="item_name" name="item_name" type="text">
 
       <label>LOT</label>
-      <input name="lot" type="text" required>
+      <input id="lot" name="lot" type="text" required>
 
       <label>규격</label>
-      <input name="spec" type="text" required>
+      <input id="spec" name="spec" type="text" required>
 
       <label>수량</label>
       <input
+        id="qty"
         name="qty"
         type="number"
         step="0.001"
@@ -67,6 +101,59 @@
 </div>
 
 <script>
+const itemInput = document.getElementById("item_code");
+const dropdown = document.getElementById("dropdown");
+
+itemInput.addEventListener("input", async () => {
+  const q = itemInput.value.trim();
+  if (q.length < 1) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  const res = await fetch(`/api/inventory-search?q=${encodeURIComponent(q)}`);
+  if (!res.ok) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  const data = await res.json();
+  if (!data.length) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  dropdown.innerHTML = "";
+  data.forEach(row => {
+    const div = document.createElement("div");
+    div.className = "dropdown-item";
+    div.textContent =
+      `${row.item_code} | ${row.item_name} | LOT:${row.lot || "-"} | ${row.location} | 재고:${row.qty}`;
+
+    div.onclick = () => {
+      itemInput.value = row.item_code;
+      document.getElementById("location").value = row.location || "";
+      document.getElementById("brand").value = row.brand || "";
+      document.getElementById("item_name").value = row.item_name || "";
+      document.getElementById("lot").value = row.lot || "";
+      document.getElementById("spec").value = row.spec || "";
+      dropdown.classList.add("hidden");
+    };
+
+    dropdown.appendChild(div);
+  });
+
+  dropdown.classList.remove("hidden");
+});
+
+// 포커스 아웃 시 드롭다운 닫기
+document.addEventListener("click", (e) => {
+  if (!itemInput.contains(e.target) && !dropdown.contains(e.target)) {
+    dropdown.classList.add("hidden");
+  }
+});
+
+// 출고 처리
 const f = document.getElementById('f');
 const out = document.getElementById('out');
 
