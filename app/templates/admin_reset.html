@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>전체 리셋 | PARS WMS</title>
+</head>
+<body>
+<div class="container">
+  <div class="card highlight">
+
+    <h2>⚠️ 재고 / 이력 전체 리셋</h2>
+
+    <p class="small">
+      이 작업은 <b>되돌릴 수 없습니다.</b><br/>
+      inventory / history 테이블이 모두 초기화됩니다.
+    </p>
+
+    <label>확인 문구 입력</label>
+    <input id="confirm" placeholder="RESET-ALL">
+
+    <button id="btnReset" style="margin-top:12px;">
+      전체 초기화 실행
+    </button>
+
+    <pre id="out" class="card" style="white-space:pre-wrap"></pre>
+
+    <p><a href="/">← 메인</a></p>
+  </div>
+</div>
+
+<script>
+const btn = document.getElementById("btnReset");
+const out = document.getElementById("out");
+
+btn.onclick = async () => {
+  const c = document.getElementById("confirm").value.trim();
+  if (c !== "RESET-ALL") {
+    alert("확인 문구가 일치하지 않습니다.");
+    return;
+  }
+
+  if (!confirm("정말로 전체 초기화하시겠습니까?")) return;
+
+  out.textContent = "처리중...";
+
+  const fd = new FormData();
+  fd.append("confirm", c);
+
+  const res = await fetch("/api/admin/reset-all", {
+    method: "POST",
+    body: fd
+  });
+
+  out.textContent = await res.text();
+};
+</script>
+</body>
+</html>
