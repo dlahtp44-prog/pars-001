@@ -7,7 +7,6 @@
   <title>이력조회</title>
 
   <style>
-    /* 메시지 영역 */
     .msg {
       display: none;
       padding: 10px 14px;
@@ -24,7 +23,6 @@
       color: #ffecec;
     }
 
-    /* 롤백 버튼 */
     .btn.rollback {
       background: #c0392b;
       color: #fff;
@@ -34,24 +32,28 @@
       cursor: pointer;
       font-size: 13px;
       font-weight: 700;
+      white-space: nowrap;
     }
-    .btn.rollback:hover {
-      filter: brightness(1.1);
-    }
+    .btn.rollback:hover { filter: brightness(1.1); }
     .btn.rollback:disabled {
       opacity: 0.4;
       cursor: not-allowed;
     }
 
-    /* 테이블 보강 */
-    table td,
-    table th {
+    .btn.batch {
+      background: #8e44ad;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
       white-space: nowrap;
     }
 
-    .muted {
-      color: #9aa3b5;
-    }
+    table th, table td { white-space: nowrap; }
+    .muted { color: #9aa3b5; }
   </style>
 </head>
 
@@ -60,7 +62,6 @@
   <div class="card">
     <h2>이력 현황</h2>
 
-    <!-- 메시지 -->
     <div id="msg-success" class="msg success"></div>
     <div id="msg-error" class="msg error"></div>
 
@@ -81,14 +82,13 @@
         </div>
         <div>
           <label>표시 개수</label>
-          <input name="limit" value="{{limit or 300}}" placeholder="예: 300"/>
+          <input name="limit" value="{{limit or 300}}"/>
         </div>
       </div>
 
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
         <button class="btn" type="submit">검색</button>
 
-        <!-- ✅ 엑셀 다운로드 (API 직접 호출) -->
         <a class="btn"
            href="/api/excel/history?year={{year}}&month={{month}}&day={{day}}&limit={{limit}}">
           엑셀 다운로드
@@ -135,13 +135,19 @@
           <td style="text-align:right;">{{r.qty}}</td>
           <td>{{r.note}}</td>
           <td>{{r.operator}}</td>
-          <td>
+          <td style="display:flex; gap:6px;">
             {% if r.can_rollback %}
-              <button
-                class="btn rollback"
-                onclick="doRollback({{r.id}}, this)">
-                롤백
+              <button class="btn rollback"
+                      onclick="doRollback({{r.id}}, this)">
+                개별
               </button>
+
+              {% if r.batch_id %}
+              <button class="btn batch"
+                      onclick="rollbackBatch('{{ r.batch_id }}')">
+                엑셀전체
+              </button>
+              {% endif %}
             {% else %}
               <span class="small muted">-</span>
             {% endif %}
@@ -153,7 +159,7 @@
     </div>
 
     <p class="small" style="margin-top:12px;">
-      ※ 입고 / 출고 / 이동 이력만 롤백 가능하며, 롤백 시 재고는 즉시 원복됩니다.
+      ※ 엑셀 입고는 <b>배치 단위 전체 롤백</b>만 실무 기준으로 권장됩니다.
     </p>
   </div>
 </div>
@@ -164,50 +170,50 @@ function showMsg(type, text) {
   const err = document.getElementById("msg-error");
   ok.style.display = "none";
   err.style.display = "none";
-
-  if (type === "success") {
-    ok.textContent = text;
-    ok.style.display = "block";
-  } else {
-    err.textContent = text;
-    err.style.display = "block";
-  }
+  (type === "success" ? ok : err).textContent = text;
+  (type === "success" ? ok : err).style.display = "block";
 }
 
 async function doRollback(historyId, btn) {
-  if (!confirm("정말 이 이력을 롤백하시겠습니까?")) return;
-
-  const note = prompt("롤백 사유를 입력하세요 (선택)") || "";
+  if (!confirm("이 이력을 롤백하시겠습니까?")) return;
+  const note = prompt("롤백 사유 (선택)") || "";
   btn.disabled = true;
 
   try {
     const res = await fetch("/api/rollback", {
       method: "POST",
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
-      body: new URLSearchParams({
-        history_id: historyId,
-        note: note
-      })
+      body: new URLSearchParams({ history_id: historyId, note })
     });
-
     const data = await res.json();
-
-    if (!res.ok || !data.ok) {
-      throw new Error(data.detail || "롤백 실패");
-    }
-
-    showMsg("success", "롤백이 성공적으로 완료되었습니다.");
-
-    // UI 즉시 반영
-    const cell = document.querySelector(`#row-${historyId} td:last-child`);
-    if (cell) cell.innerHTML = '<span class="small muted">완료</span>';
-
+    if (!data.ok) throw new Error(data.detail || "실패");
+    showMsg("success", "개별 롤백 완료");
+    btn.parentElement.innerHTML = '<span class="small muted">완료</span>';
   } catch (e) {
     showMsg("error", e.message);
     btn.disabled = false;
   }
 }
-</script>
 
+async function rollbackBatch(batchId) {
+  if (!confirm(`엑셀 입고 [${batchId}] 전체를 롤백하시겠습니까?`)) return;
+  const note = prompt("롤백 사유 (선택)") || "";
+
+  const res = await fetch("/api/rollback/batch", {
+    method: "POST",
+    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+    body: new URLSearchParams({ batch_id: batchId, note })
+  });
+
+  const data = await res.json();
+  if (!data.ok) {
+    alert(data.detail || "배치 롤백 실패");
+    return;
+  }
+
+  alert(`엑셀 입고 ${data.count}건 롤백 완료`);
+  location.reload();
+}
+</script>
 </body>
 </html>
