@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Form, HTTPException
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Optional
 
 from app.db import (
     add_history,
     resolve_inventory_brand_and_name,
     upsert_inventory,
     rollback_history,
+    get_inventory_one,   # ✅ STEP 3 핵심
 )
 
 router = APIRouter(prefix="/api/outbound", tags=["outbound"])
@@ -33,7 +35,7 @@ def normalize_qty(value) -> float:
 
 
 # =====================================================
-# 출고 처리
+# 출고 처리 (운영 안정판)
 # =====================================================
 
 @router.post("")
@@ -50,15 +52,15 @@ def outbound(
     operator: str = Form(""),
 ):
     """
-    ✅ 출고 처리
+    ✅ 출고 처리 (STEP 3 반영)
     - 소수점 3자리 수량 지원
-    - 재고 부족 시 차단
-    - 브랜드 미입력 시 자동 보정 (단일 후보일 때)
+    - 서버 기준 재고 재검증 (동시 출고 방어)
+    - 브랜드/품명 자동 보정
     - history 기록
     """
 
+    # 0️⃣ 수량 정규화
     qty_norm = normalize_qty(qty)
-
     if qty_norm <= 0:
         raise HTTPException(
             status_code=400,
@@ -84,7 +86,30 @@ def outbound(
     final_brand = resolved_brand or (brand or "")
     final_name = item_name or resolved_name or ""
 
-    # 2️⃣ 재고 차감
+    # 2️⃣ 🔐 서버 기준 재고 재확인 (STEP 3 핵심)
+    inv = get_inventory_one(
+        warehouse=warehouse,
+        location=location,
+        brand=final_brand,
+        item_code=item_code,
+        lot=lot,
+        spec=spec,
+    )
+
+    if not inv:
+        raise HTTPException(
+            status_code=409,
+            detail="선택한 재고가 존재하지 않습니다. 새로고침 후 다시 선택하세요."
+        )
+
+    current_qty = float(inv["qty"])
+    if qty_norm > current_qty:
+        raise HTTPException(
+            status_code=409,
+            detail=f"출고 수량({qty_norm})이 현재고({current_qty})를 초과했습니다."
+        )
+
+    # 3️⃣ 재고 차감
     ok = upsert_inventory(
         warehouse=warehouse,
         location=location,
@@ -97,12 +122,13 @@ def outbound(
         note=note,
     )
     if not ok:
+        # 이 케이스는 동시 출고 등 극단 상황
         raise HTTPException(
-            status_code=400,
-            detail="재고가 부족하여 출고할 수 없습니다."
+            status_code=409,
+            detail="재고가 변경되어 출고에 실패했습니다. 다시 시도하세요."
         )
 
-    # 3️⃣ 이력 기록
+    # 4️⃣ 이력 기록
     add_history(
         type="출고",
         warehouse=warehouse,
@@ -122,11 +148,12 @@ def outbound(
         "ok": True,
         "type": "출고",
         "qty": qty_norm,
+        "remain_qty": round(current_qty - qty_norm, 3),
     }
 
 
 # =====================================================
-# 출고 롤백
+# 출고 롤백 (기존 유지)
 # =====================================================
 
 @router.post("/rollback")
