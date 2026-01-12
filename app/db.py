@@ -113,43 +113,43 @@ def init_db() -> None:
                 INSERT OR IGNORE INTO users (username, password, updated_at)
                 VALUES (?, ?, ?)
             """, (_norm(u), "1234", now))
+        # =====================
+        # HISTORY
+        # =====================
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL,
+                warehouse TEXT NOT NULL,
+                operator TEXT NOT NULL DEFAULT '',
+                brand TEXT NOT NULL DEFAULT '',
+                item_code TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                lot TEXT NOT NULL,
+                spec TEXT NOT NULL,
+                from_location TEXT DEFAULT '',
+                to_location TEXT DEFAULT '',
+                qty REAL NOT NULL,
+                note TEXT DEFAULT '',
+                created_at TEXT NOT NULL
+            )
+        """)
 
-# =====================
-# HISTORY
-# =====================
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL,
-        warehouse TEXT NOT NULL,
-        operator TEXT NOT NULL DEFAULT '',
-        brand TEXT NOT NULL DEFAULT '',
-        item_code TEXT NOT NULL,
-        item_name TEXT NOT NULL,
-        lot TEXT NOT NULL,
-        spec TEXT NOT NULL,
-        from_location TEXT DEFAULT '',
-        to_location TEXT DEFAULT '',
-        qty REAL NOT NULL,
-        note TEXT DEFAULT '',
-        created_at TEXT NOT NULL
-    )
-""")
+        # 🔥 기존 DB 마이그레이션 (컬럼 먼저!)
+        _add_column_if_not_exists(cur, "history", "batch_id", "batch_id TEXT")
+        _add_column_if_not_exists(cur, "history", "rolled_back", "rolled_back INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_not_exists(cur, "history", "rollback_at", "rollback_at TEXT")
+        _add_column_if_not_exists(cur, "history", "rollback_by", "rollback_by TEXT")
+        _add_column_if_not_exists(cur, "history", "rollback_note", "rollback_note TEXT")
 
-# 🔥 1️⃣ 기존 DB 마이그레이션 (컬럼 먼저!)
-_add_column_if_not_exists(cur, "history", "batch_id", "batch_id TEXT")
-_add_column_if_not_exists(cur, "history", "rolled_back", "rolled_back INTEGER NOT NULL DEFAULT 0")
-_add_column_if_not_exists(cur, "history", "rollback_at", "rollback_at TEXT")
-_add_column_if_not_exists(cur, "history", "rollback_by", "rollback_by TEXT")
-_add_column_if_not_exists(cur, "history", "rollback_note", "rollback_note TEXT")
+        # 🔥 인덱스는 컬럼 생성 후
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_history_batch ON history (batch_id)"
+        )
 
-# 🔥 2️⃣ 인덱스는 반드시 컬럼 생성 후
-cur.execute(
-    "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
-)
-cur.execute(
-    "CREATE INDEX IF NOT EXISTS idx_history_batch ON history (batch_id)"
-)
 
 
         # =====================
