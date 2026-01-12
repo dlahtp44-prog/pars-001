@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Form, HTTPException
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 from app.db import (
     add_history,
@@ -16,15 +16,29 @@ router = APIRouter(prefix="/api/inbound", tags=["inbound"])
 
 def normalize_qty(value) -> float:
     """
-    수량을 소수점 3자리까지 반올림하여 float로 반환
+    수량 파싱 규칙 (엑셀/수기 공통)
+    - 콤마 허용 (1,234.5)
+    - 과학표기 허용 (1E-3)
+    - 소수점 3자리 반올림
     """
     try:
-        d = Decimal(str(value)).quantize(
+        if value is None:
+            raise ValueError
+
+        s = str(value).strip()
+        if s == "":
+            raise ValueError
+
+        # 콤마 제거
+        s = s.replace(",", "")
+
+        d = Decimal(s).quantize(
             Decimal("0.000"),
             rounding=ROUND_HALF_UP
         )
         return float(d)
-    except Exception:
+
+    except (InvalidOperation, ValueError):
         raise HTTPException(
             status_code=400,
             detail="수량 형식이 올바르지 않습니다."
@@ -44,12 +58,12 @@ def inbound(
     item_name: str = Form(...),
     lot: str = Form(...),
     spec: str = Form(...),
-    qty: float = Form(...),
+    qty: float = Form(...),   # 🔥 float 유지 (절대 int로 바꾸지 말 것)
     note: str = Form(""),
     operator: str = Form(""),
 ):
     """
-    ✅ 입고 처리
+    ✅ 수기 입고 처리
     - 소수점 3자리 수량 지원
     - 재고 반영
     - history 기록
@@ -72,7 +86,7 @@ def inbound(
         item_name=item_name,
         lot=lot,
         spec=spec,
-        qty_delta=qty_norm,
+        qty_delta=qty_norm,   # 🔥 소수점 그대로
         note=note,
     )
     if not ok:
@@ -93,7 +107,7 @@ def inbound(
         spec=spec,
         from_location="입고",
         to_location=location,
-        qty=qty_norm,
+        qty=qty_norm,        # 🔥 이력도 동일 수량
         note=note,
     )
 
