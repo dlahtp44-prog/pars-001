@@ -7,9 +7,7 @@
                "Apple SD Gothic Neo", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -18,35 +16,20 @@ body {
   color: #e6e6e6;
 }
 
-a {
-  color: #8ab4ff;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
+a { color: #8ab4ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
 
 /* =====================================================
    LAYOUT
 ===================================================== */
-.container {
-  max-width: 980px;
-  margin: 0 auto;
-}
+.container { max-width: 980px; margin: 0 auto; }
 
-.grid {
+.grid, .grid2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
-.grid2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-/* 메인 메뉴 전용 */
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -65,10 +48,7 @@ a:hover {
   margin-bottom: 12px;
 }
 
-.header-bar h1 {
-  margin: 0;
-  font-size: 22px;
-}
+.header-bar h1 { margin: 0; font-size: 22px; }
 
 /* 로그아웃 버튼 */
 .logout-btn {
@@ -81,7 +61,6 @@ a:hover {
   font-weight: 700;
   white-space: nowrap;
 }
-
 .logout-btn:hover {
   background: #ff6b6b;
   border-color: #ff6b6b;
@@ -100,12 +79,8 @@ a:hover {
   margin: 12px 0;
 }
 
-.card h1,
-.card h2 {
-  margin: 0 0 12px 0;
-}
+.card h1, .card h2 { margin: 0 0 12px 0; }
 
-/* CS / 파손 강조 카드 */
 .card.highlight,
 .menu-btn.highlight {
   border: 2px solid #ff6b6b;
@@ -128,20 +103,10 @@ a:hover {
   color: #e6e6e6;
 }
 
-.menu-btn:hover {
-  filter: brightness(1.1);
-  text-decoration: none;
-}
+.menu-btn:hover { filter: brightness(1.1); text-decoration: none; }
 
-/* 메인 메뉴 카드 UX 보강 */
-.menu-grid .card {
-  cursor: pointer;
-  text-align: center;
-}
-
-.menu-grid .card:hover {
-  filter: brightness(1.08);
-}
+.menu-grid .card { cursor: pointer; text-align: center; }
+.menu-grid .card:hover { filter: brightness(1.08); }
 
 /* =====================================================
    FORM
@@ -153,9 +118,7 @@ label {
   color: #b9c0cf;
 }
 
-input,
-textarea,
-select {
+input, textarea, select {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
@@ -184,13 +147,10 @@ button {
   cursor: pointer;
   font-weight: 700;
 }
-
-button:hover {
-  filter: brightness(1.08);
-}
+button:hover { filter: brightness(1.08); }
 
 /* =====================================================
-   TABLE
+   TABLE (BASE)
 ===================================================== */
 table {
   width: 100%;
@@ -199,8 +159,7 @@ table {
   font-size: 14px;
 }
 
-th,
-td {
+th, td {
   border-bottom: 1px solid #2a2f3a;
   padding: 10px 8px;
   vertical-align: top;
@@ -233,10 +192,164 @@ th {
   padding: 24px;
   margin: 0 auto;
 }
+.login-box h1 { text-align: center; margin-bottom: 20px; }
 
-.login-box h1 {
-  text-align: center;
-  margin-bottom: 20px;
+/* =====================================================
+   ✅ HISTORY UI UPGRADE (PC+MOBILE)
+   - 테이블 가독성 / 고정헤더 / 스크롤 / 배지 / 수량강조
+===================================================== */
+
+/* 이력 테이블 컨테이너(가로 스크롤 + 고정헤더 대비) */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #2a2f3a;
+  background: #12151c;
+}
+
+/* 테이블을 wrap 안에서 꽉 차게 */
+.table-wrap table {
+  margin-top: 0;
+  min-width: 980px;          /* 🔥 컬럼 많은 페이지 가로 유지 */
+  border-collapse: separate; /* sticky header 더 안정적 */
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+/* 고정 헤더 */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #12151c;
+  border-bottom: 1px solid #2a2f3a;
+}
+
+/* 줄간격/가독성 */
+.table-wrap td, .table-wrap th {
+  padding: 10px 10px;
+  white-space: nowrap; /* 기본은 줄바꿈 방지 */
+}
+
+/* 품명 같은 긴 텍스트는 줄바꿈 허용 */
+.table-wrap td.wrap {
+  white-space: normal;
+  line-height: 1.35;
+  min-width: 220px;
+}
+
+/* hover 강조 */
+.table-wrap tbody tr:hover {
+  background: rgba(138, 180, 255, 0.06);
+}
+
+/* 행 구분 더 깔끔하게 */
+.table-wrap tbody td {
+  border-bottom: 1px solid rgba(42, 47, 58, 0.7);
+}
+
+/* 시간(모노스페이스) */
+td.time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #b9c0cf;
+}
+
+/* FROM → TO */
+td.loc {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* LOT / 규격 모노스페이스 */
+td.lot, td.spec {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* 브랜드/품번/품명 묶음 */
+td.item {
+  white-space: normal;
+  min-width: 220px;
+}
+td.item .brand { font-size: 12px; color: #9aa3b5; }
+td.item .code  { font-weight: 800; margin-top: 2px; }
+td.item .name  { font-size: 13px; margin-top: 2px; color: #e6e6e6; }
+
+/* 유형 배지 */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.badge.inbound  { background: rgba(39, 174, 96, 0.18);  color: #7dffb2; }
+.badge.outbound { background: rgba(231, 76, 60, 0.18);  color: #ff9f96; }
+.badge.move     { background: rgba(52, 152, 219, 0.18); color: #8fd1ff; }
+.badge.rollback { background: rgba(127, 140, 141, 0.18); color: #cfd6d6; }
+
+/* 수량 강조 */
+td.qty {
+  text-align: right;
+  font-weight: 900;
+  min-width: 70px;
+}
+td.qty.plus  { color: #7dffb2; }
+td.qty.minus { color: #ff9f96; }
+td.qty.zero  { color: #7f8c8d; opacity: 0.75; }
+
+/* 롤백 버튼 (작고 깔끔하게) */
+.rollback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ffb3b3;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.rollback-btn:hover {
+  background: rgba(255, 107, 107, 0.22);
+  border-color: rgba(255, 107, 107, 0.55);
+}
+
+/* 롤백 완료(비활성) */
+.rollback-btn.disabled,
+.rollback-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+/* batch_id 표시(엑셀 업로드 묶음용) */
+.batch-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(138, 180, 255, 0.25);
+  background: rgba(138, 180, 255, 0.12);
+  color: #bcd6ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* 같은 batch 그룹(옵션: tr에 data-batch 있으면) */
+tr[data-batch] {
+  border-left: 4px solid rgba(138, 180, 255, 0.5);
+}
+tr[data-batch]:hover {
+  border-left-color: rgba(138, 180, 255, 1);
 }
 
 /* =====================================================
@@ -244,25 +357,14 @@ th {
 ===================================================== */
 @media (max-width: 720px) {
 
-  body {
-    padding: 10px;
-  }
+  body { padding: 10px; }
 
-  .grid,
-  .grid2,
-  .menu-grid {
-    grid-template-columns: 1fr;
-  }
+  .grid, .grid2, .menu-grid { grid-template-columns: 1fr; }
 
-  .card {
-    padding: 14px;
-  }
+  .card { padding: 14px; }
 
-  button {
-    padding: 14px;
-  }
+  button { padding: 14px; }
 
-  /* 헤더 모바일 대응 */
   .header-bar {
     flex-direction: column;
     align-items: stretch;
@@ -279,12 +381,20 @@ th {
     text-align: center;
     padding: 12px;
   }
+
+  /* 이력 표: 모바일에서는 조금 더 촘촘 */
+  .table-wrap table {
+    min-width: 860px;
+    font-size: 12px;
+  }
+  .table-wrap td, .table-wrap th {
+    padding: 9px 8px;
+  }
 }
+
 /* =====================================================
    📅 CALENDAR (PC + MOBILE)
 ===================================================== */
-
-/* 월 이동 헤더 */
 .calendar-header {
   display: flex;
   justify-content: space-between;
@@ -308,7 +418,6 @@ th {
   font-size: 13px;
 }
 
-/* 요일 */
 .calendar-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -319,26 +428,24 @@ th {
   text-align: center;
 }
 
-/* 날짜 그리드 */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
 }
 
-/* 날짜 셀 */
+
 .calendar-cell {
   background: #171a21;
   border: 1px solid #2a2f3a;
   border-radius: 10px;
   padding: 6px;
-  min-height: 110px;   /* 🔒 높이 고정 */
+  min-height: 110px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* 날짜 숫자 */
 .calendar-date {
   font-size: 12px;
   font-weight: 700;
@@ -346,7 +453,6 @@ th {
   color: #b9c0cf;
 }
 
-/* 메모 영역 */
 .calendar-memo {
   font-size: 12px;
   line-height: 1.3;
@@ -355,7 +461,6 @@ th {
   overflow: hidden;
 }
 
-/* 메모 한 줄 */
 .calendar-memo div {
   max-width: 100%;
   white-space: nowrap;
@@ -363,43 +468,15 @@ th {
   text-overflow: ellipsis;
 }
 
-/* 오늘 강조 */
-.calendar-cell.today {
-  border: 2px solid #8ab4ff;
-}
+.calendar-cell.today { border: 2px solid #8ab4ff; }
+.calendar-cell.has-memo { background: #1f2533; }
 
-/* 메모 있는 날 표시 */
-.calendar-cell.has-memo {
-  background: #1f2533;
-}
+.calendar-cell.clickable { cursor: pointer; }
+.calendar-cell.clickable:hover { filter: brightness(1.1); }
 
-/* 클릭 가능 표시 */
-.calendar-cell.clickable {
-  cursor: pointer;
-}
-.calendar-cell.clickable:hover {
-  filter: brightness(1.1);
-}
-
-/* =====================================================
-   📱 MOBILE CALENDAR
-===================================================== */
 @media (max-width: 720px) {
-
-  .calendar-grid {
-    gap: 4px;
-  }
-
-  .calendar-cell {
-    min-height: 90px;
-    padding: 5px;
-  }
-
-  .calendar-date {
-    font-size: 11px;
-  }
-
-  .calendar-memo {
-    font-size: 11px;
-  }
+  .calendar-grid { gap: 4px; }
+  .calendar-cell { min-height: 90px; padding: 5px; }
+  .calendar-date { font-size: 11px; }
+  .calendar-memo { font-size: 11px; }
 }
