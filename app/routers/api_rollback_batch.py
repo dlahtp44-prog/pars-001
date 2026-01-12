@@ -18,17 +18,21 @@ def rollback_batch_api(
     """
 
     if not batch_id:
-        raise HTTPException(400, "batch_id는 필수입니다.")
+        raise HTTPException(status_code=400, detail="batch_id는 필수입니다.")
 
-    # 🔹 해당 batch 이력 조회 (아직 롤백 안 된 것만)
+    # 🔹 batch_id에 해당하는 이력 중 아직 롤백 안 된 것만
     rows = query_history(limit=10_000)
+
     targets = [
         r for r in rows
-        if r.get("batch_id") == batch_id and r.get("rolled_back", 0) == 0
+        if r["batch_id"] == batch_id and (r["rolled_back"] or 0) == 0
     ]
 
     if not targets:
-        raise HTTPException(404, "롤백 대상 이력이 없습니다.")
+        raise HTTPException(
+            status_code=404,
+            detail="롤백 대상 이력이 없습니다."
+        )
 
     success = 0
     failed = []
@@ -36,11 +40,12 @@ def rollback_batch_api(
     for r in targets:
         try:
             rollback_history(
-                r["id"],
-                operator,
-                note or f"배치롤백:{batch_id}"
+                history_id=r["id"],
+                operator=operator,
+                note=note or f"배치롤백:{batch_id}"
             )
             success += 1
+
         except Exception as e:
             failed.append({
                 "history_id": r["id"],
