@@ -1,6 +1,9 @@
+# app/routers/api_admin_reset.py
+
 from fastapi import APIRouter, Form, HTTPException
-from app.db import get_db
 from datetime import datetime
+
+from app.db import get_db
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -8,12 +11,12 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.post("/reset-all")
 def reset_inventory_and_history(
     confirm: str = Form(...),
-    operator: str = Form("SYSTEM")
+    operator: str = Form("SYSTEM"),
 ):
     """
-    ⚠️ 재고 + 이력 전체 초기화
-    - 되돌릴 수 없음
+    ⚠️ 재고 + 이력 전체 초기화 (되돌릴 수 없음)
     - 관리자 전용
+    - confirm="RESET" 필수
     """
 
     if confirm != "RESET":
@@ -23,9 +26,9 @@ def reset_inventory_and_history(
         )
 
     conn = get_db()
-    cur = conn.cursor()
-
     try:
+        cur = conn.cursor()
+
         # 🔥 전체 삭제
         cur.execute("DELETE FROM inventory")
         cur.execute("DELETE FROM history")
@@ -38,6 +41,8 @@ def reset_inventory_and_history(
             status_code=500,
             detail=f"전체 리셋 중 오류 발생: {e}"
         )
+    finally:
+        conn.close()
 
     return {
         "ok": True,
