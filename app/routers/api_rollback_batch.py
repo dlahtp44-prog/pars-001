@@ -1,37 +1,24 @@
 from fastapi import APIRouter, Form, HTTPException
-from app.db import get_db, rollback_history
+from app.db import rollback_batch
 
-router = APIRouter(prefix="/api/rollback", tags=["Rollback"])
+router = APIRouter(prefix="/api/rollback", tags=["rollback"])
 
 @router.post("/batch")
-def rollback_batch(
+def rollback_batch_api(
     batch_id: str = Form(...),
-    operator: str = Form(""),
+    operator: str = Form("SYSTEM"),
     note: str = Form("")
 ):
-    conn = get_db()
     try:
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT id FROM history
-            WHERE batch_id = ?
-              AND rolled_back = 0
-            ORDER BY id DESC
-        """, (batch_id,))
-        rows = cur.fetchall()
-
-        if not rows:
-            raise HTTPException(status_code=404, detail="롤백할 이력이 없습니다.")
-
-        for r in rows:
-            rollback_history(r["id"], operator, note or f"배치롤백:{batch_id}")
+        count = rollback_batch(batch_id, operator, note)
+        if count == 0:
+            raise HTTPException(404, "롤백 대상 없음")
 
         return {
             "ok": True,
             "batch_id": batch_id,
-            "count": len(rows)
+            "rolled_back_count": count
         }
 
-    finally:
-        conn.close()
+    except Exception as e:
+        raise HTTPException(500, str(e))
