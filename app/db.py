@@ -114,30 +114,53 @@ def init_db() -> None:
                 VALUES (?, ?, ?)
             """, (_norm(u), "1234", now))
 
-        # =====================
-        # HISTORY
-        # =====================
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                warehouse TEXT NOT NULL,
-                operator TEXT NOT NULL DEFAULT '',
-                brand TEXT NOT NULL DEFAULT '',
-                item_code TEXT NOT NULL,
-                item_name TEXT NOT NULL,
-                lot TEXT NOT NULL,
-                spec TEXT NOT NULL,
-                from_location TEXT DEFAULT '',
-                to_location TEXT DEFAULT '',
-                qty REAL NOT NULL,
-                note TEXT DEFAULT '',
-                created_at TEXT NOT NULL
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
-        )
+# =====================
+# HISTORY
+# =====================
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        warehouse TEXT NOT NULL,
+        operator TEXT NOT NULL DEFAULT '',
+        brand TEXT NOT NULL DEFAULT '',
+        item_code TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        lot TEXT NOT NULL,
+        spec TEXT NOT NULL,
+        from_location TEXT DEFAULT '',
+        to_location TEXT DEFAULT '',
+        qty REAL NOT NULL,
+        note TEXT DEFAULT '',
+        batch_id TEXT,
+        rolled_back INTEGER NOT NULL DEFAULT 0,
+        rollback_at TEXT,
+        rollback_by TEXT,
+        rollback_note TEXT,
+        created_at TEXT NOT NULL
+    )
+""")
+
+# 인덱스
+cur.execute(
+    "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
+)
+cur.execute(
+    "CREATE INDEX IF NOT EXISTS idx_history_batch ON history (batch_id)"
+)
+
+# 🔥 기존 운영 DB용 마이그레이션 (안전)
+_add_column_if_not_exists(cur, "history", "batch_id", "batch_id TEXT")
+_add_column_if_not_exists(cur, "history", "rolled_back", "rolled_back INTEGER NOT NULL DEFAULT 0")
+_add_column_if_not_exists(cur, "history", "rollback_at", "rollback_at TEXT")
+_add_column_if_not_exists(cur, "history", "rollback_by", "rollback_by TEXT")
+_add_column_if_not_exists(cur, "history", "rollback_note", "rollback_note TEXT")
+
+
+        conn.commit()
+    finally:
+        conn.close()
+        
 
         # 🔥 롤백 컬럼 마이그레이션 (운영 안전판)
         _add_column_if_not_exists(
