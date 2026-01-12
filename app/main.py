@@ -63,6 +63,7 @@ from app.pages.labels import router as labels_page_router
 from app.pages.erp_verify import router as erp_verify_page_router
 from app.pages.calendar import router as calendar_page_router
 from app.pages import init_inventory
+from app.pages import admin_reset
 
 # ✅ 이력 엑셀 (pandas 없는 버전)
 from app.routers.excel_history import router as excel_history_router
@@ -89,6 +90,7 @@ app.include_router(api_rollback_batch_router)
 app.include_router(api_admin_reset.router)
 app.include_router(api_init_inventory.router)
 app.include_router(init_inventory.router)
+app.include_router(admin_reset.router)
 
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
