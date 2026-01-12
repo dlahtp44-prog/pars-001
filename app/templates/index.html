@@ -52,6 +52,20 @@
       border-radius: 14px;
     }
 
+    /* 관리자 영역 구분 */
+    .admin-box {
+      margin-top: 22px;
+      padding-top: 14px;
+      border-top: 2px dashed #374151;
+    }
+
+    .admin-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fca5a5;
+      margin-bottom: 10px;
+    }
+
     /* =========================
        📱 모바일 최적화
     ========================= */
@@ -112,29 +126,51 @@
       <a href="/logout" class="logout-btn">로그아웃</a>
     </div>
 
-    <!-- 메뉴 -->
-<!-- 메뉴 -->
-<div class="menu-grid">
+    <!-- =========================
+         기본 메뉴
+    ========================= -->
+    <div class="menu-grid">
 
-  <a class="card" href="/page/inbound">입고</a>
-  <a class="card" href="/page/outbound">출고</a>
-  <a class="card" href="/page/move">이동</a>
-  <a class="card" href="/page/inventory">재고조회</a>
-  <a class="card" href="/page/history">이력</a>
-  <a class="card" href="/page/excel">엑셀 센터</a>
+      <a class="card" href="/page/inbound">입고</a>
+      <a class="card" href="/page/outbound">출고</a>
+      <a class="card" href="/page/move">이동</a>
+      <a class="card" href="/page/inventory">재고조회</a>
+      <a class="card" href="/page/history">이력</a>
+      <a class="card" href="/page/excel">엑셀 센터</a>
 
-  <a class="card" href="/page/labels">🏷️ 라벨 출력</a>
+      <a class="card" href="/page/labels">🏷️ 라벨 출력</a>
 
-  <!-- 📅 달력 -->
-  <a class="card highlight" href="/page/calendar">📅 달력</a>
+      <!-- 📅 달력 -->
+      <a class="card highlight" href="/page/calendar">📅 달력</a>
 
-  <!-- 📊 ERP 재고 검증 (신규) -->
-  <a class="card highlight" href="/page/erp-verify">📊 ERP 재고 검증</a>
+      <!-- 📊 ERP 재고 검증 -->
+      <a class="card highlight" href="/page/erp-verify">📊 ERP 재고 검증</a>
 
-  <a class="card highlight" href="/damage">CS / 파손 등록</a>
-  <a class="card" href="/page/damage-history">CS 이력</a>
-  <a class="card" href="/m">모바일</a>
+      <a class="card highlight" href="/damage">CS / 파손 등록</a>
+      <a class="card" href="/page/damage-history">CS 이력</a>
 
+      <a class="card" href="/m">모바일</a>
+
+    </div>
+
+    <!-- =========================
+         🛑 관리자 전용 영역
+    ========================= -->
+    <div class="admin-box">
+      <div class="admin-title">⚠️ 관리자 전용</div>
+
+      <div class="menu-grid">
+        <a class="card highlight" href="/page/init-inventory">
+          🧙‍♂️ 초기 재고 세팅
+        </a>
+
+        <a class="card highlight" href="/page/admin-reset">
+          🔥 재고 / 이력 전체 리셋
+        </a>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 </body>
