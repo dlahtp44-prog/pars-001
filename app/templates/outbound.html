@@ -7,9 +7,7 @@
   <title>출고 | PARS WMS</title>
 
   <style>
-    .dropdown {
-      position: relative;
-    }
+    .dropdown { position: relative; }
     .dropdown-list {
       position: absolute;
       top: 100%;
@@ -28,16 +26,12 @@
       font-size: 14px;
       border-bottom: 1px solid #1f2937;
     }
-    .dropdown-item:last-child {
-      border-bottom: none;
-    }
+    .dropdown-item:last-child { border-bottom: none; }
     .dropdown-item:hover {
       background: #2563eb;
       color: #fff;
     }
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
   </style>
 </head>
 
@@ -45,7 +39,6 @@
 <div class="container">
   <div class="card">
 
-    <!-- HEADER -->
     <div class="header-bar">
       <h2>출고</h2>
       <a href="/logout" class="logout-btn">로그아웃</a>
@@ -53,10 +46,10 @@
 
     <form id="f">
       <label>창고</label>
-      <input name="warehouse" type="text" placeholder="예: 서이천" required>
+      <input name="warehouse" type="text" required>
 
       <label>작업자</label>
-      <input name="operator" type="text" placeholder="예: 홍길동" required>
+      <input name="operator" type="text" required>
 
       <label>로케이션</label>
       <input id="location" name="location" type="text" required>
@@ -66,14 +59,7 @@
 
       <label>품번</label>
       <div class="dropdown">
-        <input
-          id="item_code"
-          name="item_code"
-          type="text"
-          autocomplete="off"
-          placeholder="품번 입력 후 선택"
-          required
-        >
+        <input id="item_code" name="item_code" type="text" autocomplete="off" required>
         <div id="dropdown" class="dropdown-list hidden"></div>
       </div>
 
@@ -98,51 +84,48 @@
       >
 
       <label>비고</label>
-      <input name="note" type="text" placeholder="선택">
+      <input name="note" type="text">
 
-      <button id="submitBtn" type="submit">출고 처리</button>
+      <button id="submitBtn" type="submit" disabled>출고 처리</button>
     </form>
 
     <pre id="out" class="card" style="white-space:pre-wrap"></pre>
-
-    <p>
-      <a href="/">← 메인</a>
-    </p>
+    <p><a href="/">← 메인</a></p>
   </div>
 </div>
 
 <script>
 /* =========================
-   출고 수량 초과 방지용
+   출고 수량 초과 방지
 ========================= */
-let availableQty = null;   // ← ★ 여기 ★
+let availableQty = null;
 
 const itemInput = document.getElementById("item_code");
 const dropdown = document.getElementById("dropdown");
 const qtyInput = document.getElementById("qty");
 const submitBtn = document.getElementById("submitBtn");
-
+const out = document.getElementById("out");
+const f = document.getElementById("f");
 
 let debounceTimer = null;
 
-// =========================
-// 품번 → 재고 검색 (디바운스)
-// =========================
+/* =========================
+   품번 → 재고 검색
+========================= */
 itemInput.addEventListener("input", () => {
+  submitBtn.disabled = true;
+  availableQty = null;
   clearTimeout(debounceTimer);
 
   debounceTimer = setTimeout(async () => {
     const q = itemInput.value.trim();
-    if (q.length < 1) {
+    if (!q) {
       dropdown.classList.add("hidden");
       return;
     }
 
     const res = await fetch(`/api/inventory-search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) {
-      dropdown.classList.add("hidden");
-      return;
-    }
+    if (!res.ok) return;
 
     const data = await res.json();
     if (!data.length) {
@@ -159,17 +142,19 @@ itemInput.addEventListener("input", () => {
 
       div.onclick = () => {
         itemInput.value = row.item_code;
-        document.getElementById("location").value = row.location || "";
-        document.getElementById("brand").value = row.brand || "";
-        document.getElementById("item_name").value = row.item_name || "";
-        document.getElementById("lot").value = row.lot || "";
-        document.getElementById("spec").value = row.spec || "";
-        dropdown.classList.add("hidden");
+        location.value = row.location || "";
+        brand.value = row.brand || "";
+        item_name.value = row.item_name || "";
+        lot.value = row.lot || "";
+        spec.value = row.spec || "";
 
-        // 👉 다음 입력 포커스
+        availableQty = Number(row.qty || 0);
+        qtyInput.max = availableQty;
+        submitBtn.disabled = false;
+
+        dropdown.classList.add("hidden");
         qtyInput.focus();
       };
-
       dropdown.appendChild(div);
     });
 
@@ -177,37 +162,42 @@ itemInput.addEventListener("input", () => {
   }, 300);
 });
 
-// =========================
-// 외부 클릭 시 드롭다운 닫기
-// =========================
-document.addEventListener("click", (e) => {
-  if (!itemInput.contains(e.target) && !dropdown.contains(e.target)) {
-    dropdown.classList.add("hidden");
+/* =========================
+   수량 초과 방지
+========================= */
+qtyInput.addEventListener("input", () => {
+  const v = Number(qtyInput.value);
+
+  if (availableQty === null || v <= 0) {
+    submitBtn.disabled = true;
+    return;
+  }
+
+  if (v > availableQty) {
+    submitBtn.disabled = true;
+    qtyInput.setCustomValidity(
+      `출고 수량이 현재고(${availableQty})를 초과했습니다`
+    );
+  } else {
+    qtyInput.setCustomValidity("");
+    submitBtn.disabled = false;
   }
 });
 
-// =========================
-// 출고 처리
-// =========================
-const f = document.getElementById('f');
-const out = document.getElementById('out');
-
-f.addEventListener('submit', async (e) => {
+/* =========================
+   출고 처리
+========================= */
+f.addEventListener("submit", async (e) => {
   e.preventDefault();
   submitBtn.disabled = true;
-  out.textContent = '처리중...';
+  out.textContent = "처리중...";
 
   try {
     const fd = new FormData(f);
-    const res = await fetch('/api/outbound', {
-      method: 'POST',
-      body: fd
-    });
-
-    const text = await res.text();
-    out.textContent = text;
-  } catch (err) {
-    out.textContent = '❌ 출고 처리 중 오류 발생';
+    const res = await fetch("/api/outbound", { method: "POST", body: fd });
+    out.textContent = await res.text();
+  } catch {
+    out.textContent = "❌ 출고 처리 중 오류 발생";
   } finally {
     submitBtn.disabled = false;
   }
