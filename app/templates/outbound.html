@@ -42,7 +42,8 @@
     <form id="f">
       <div class="form-row">
         <label>창고</label>
-        <input name="warehouse" required>
+        <!-- ✅ readonly + id 추가 -->
+        <input id="warehouse" name="warehouse" readonly required>
       </div>
 
       <div class="form-row">
@@ -129,6 +130,7 @@ let selectedQty = null;
 
 const f = document.getElementById("f");
 const itemCode = document.getElementById("item_code");
+const warehouse = document.getElementById("warehouse"); // ✅ 추가
 const modal = document.getElementById("stockModal");
 const tbody = document.querySelector("#stockTable tbody");
 const qtyInput = document.getElementById("qty");
@@ -164,6 +166,7 @@ document.getElementById("btnSelectStock").onclick = async () => {
       <td>${r.qty}</td>
     `;
     tr.onclick = () => {
+      warehouse.value = r.warehouse;   // ✅ 핵심 수정
       location.value = r.location;
       brand.value = r.brand;
       item_name.value = r.item_name;
