@@ -271,6 +271,26 @@ def resolve_inventory_brand_and_name(
 # =====================================================
 # INVENTORY
 # =====================================================
+def get_inventory_one(
+    warehouse, location, brand,
+    item_code, lot, spec
+) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT * FROM inventory
+            WHERE warehouse=? AND location=? AND brand=?
+              AND item_code=? AND lot=? AND spec=?
+        """, (
+            _norm(warehouse), _norm(location), _norm(brand),
+            _norm(item_code), _norm(lot), _norm(spec)
+        ))
+        r = cur.fetchone()
+        return dict(r) if r else None
+    finally:
+        conn.close()
+
 def get_inventory_by_item_code(
     *, item_code: str, warehouse: str | None = None
 ) -> List[Dict[str, Any]]:
