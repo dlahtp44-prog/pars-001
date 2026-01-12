@@ -7,31 +7,26 @@
   <title>출고 | PARS WMS</title>
 
   <style>
-    .dropdown { position: relative; }
-    .dropdown-list {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: #111827;
-      border: 1px solid #374151;
+    .form-row { margin-bottom: 10px; }
+    .form-row label { display:inline-block; width:90px; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #fff;
+      max-width: 800px;
+      margin: 8% auto;
+      padding: 15px;
       border-radius: 8px;
-      max-height: 240px;
-      overflow-y: auto;
-      z-index: 999;
     }
-    .dropdown-item {
-      padding: 8px 10px;
-      cursor: pointer;
-      font-size: 14px;
-      border-bottom: 1px solid #1f2937;
-    }
-    .dropdown-item:last-child { border-bottom: none; }
-    .dropdown-item:hover {
-      background: #2563eb;
-      color: #fff;
-    }
-    .hidden { display: none; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border:1px solid #ccc; padding:6px; text-align:center; }
+    tr:hover { background:#f3f4f6; cursor:pointer; }
   </style>
 </head>
 
@@ -45,46 +40,57 @@
     </div>
 
     <form id="f">
-      <label>창고</label>
-      <input name="warehouse" type="text" required>
-
-      <label>작업자</label>
-      <input name="operator" type="text" required>
-
-      <label>로케이션</label>
-      <input id="location" name="location" type="text" required>
-
-      <label>브랜드</label>
-      <input id="brand" name="brand" type="text">
-
-      <label>품번</label>
-      <div class="dropdown">
-        <input id="item_code" name="item_code" type="text" autocomplete="off" required>
-        <div id="dropdown" class="dropdown-list hidden"></div>
+      <div class="form-row">
+        <label>창고</label>
+        <input name="warehouse" required>
       </div>
 
-      <label>품명</label>
-      <input id="item_name" name="item_name" type="text">
+      <div class="form-row">
+        <label>작업자</label>
+        <input name="operator" required>
+      </div>
 
-      <label>LOT</label>
-      <input id="lot" name="lot" type="text" required>
+      <div class="form-row">
+        <label>품번</label>
+        <input id="item_code" name="item_code" required>
+        <button type="button" id="btnSelectStock">출고재고선택</button>
+      </div>
 
-      <label>규격</label>
-      <input id="spec" name="spec" type="text" required>
+      <div class="form-row">
+        <label>로케이션</label>
+        <input id="location" name="location" readonly required>
+      </div>
 
-      <label>수량</label>
-      <input
-        id="qty"
-        name="qty"
-        type="number"
-        step="0.001"
-        inputmode="decimal"
-        placeholder="수량 (소수점 3자리까지)"
-        required
-      >
+      <div class="form-row">
+        <label>브랜드</label>
+        <input id="brand" name="brand" readonly>
+      </div>
 
-      <label>비고</label>
-      <input name="note" type="text">
+      <div class="form-row">
+        <label>품명</label>
+        <input id="item_name" name="item_name" readonly>
+      </div>
+
+      <div class="form-row">
+        <label>LOT</label>
+        <input id="lot" name="lot" readonly required>
+      </div>
+
+      <div class="form-row">
+        <label>규격</label>
+        <input id="spec" name="spec" readonly required>
+      </div>
+
+      <div class="form-row">
+        <label>수량</label>
+        <input id="qty" name="qty" type="number" step="0.001" required>
+        <span id="remainQty" style="margin-left:8px;color:#555;">남은 재고: -</span>
+      </div>
+
+      <div class="form-row">
+        <label>비고</label>
+        <input name="note">
+      </div>
 
       <button id="submitBtn" type="submit" disabled>출고 처리</button>
     </form>
@@ -94,99 +100,111 @@
   </div>
 </div>
 
-<script>
-/* =========================
-   출고 수량 초과 방지
-========================= */
-let availableQty = null;
+<!-- =====================
+     출고 재고 선택 모달
+===================== -->
+<div id="stockModal" class="modal">
+  <div class="modal-content">
+    <h3>출고 재고 선택</h3>
+    <table id="stockTable">
+      <thead>
+        <tr>
+          <th>로케이션</th>
+          <th>LOT</th>
+          <th>규격</th>
+          <th>현재고</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-const itemInput = document.getElementById("item_code");
-const dropdown = document.getElementById("dropdown");
+    <div style="text-align:right;margin-top:10px;">
+      <button type="button" id="btnCloseModal">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedQty = null;
+
+const f = document.getElementById("f");
+const itemCode = document.getElementById("item_code");
+const modal = document.getElementById("stockModal");
+const tbody = document.querySelector("#stockTable tbody");
 const qtyInput = document.getElementById("qty");
+const remainQty = document.getElementById("remainQty");
 const submitBtn = document.getElementById("submitBtn");
 const out = document.getElementById("out");
-const f = document.getElementById("f");
 
-let debounceTimer = null;
-
-/* =========================
-   품번 → 재고 검색
-========================= */
-itemInput.addEventListener("input", () => {
-  submitBtn.disabled = true;
-  availableQty = null;
-  clearTimeout(debounceTimer);
-
-  debounceTimer = setTimeout(async () => {
-    const q = itemInput.value.trim();
-    if (!q) {
-      dropdown.classList.add("hidden");
-      return;
-    }
-
-    const res = await fetch(`/api/inventory-search?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return;
-
-    const data = await res.json();
-    if (!data.length) {
-      dropdown.classList.add("hidden");
-      return;
-    }
-
-    dropdown.innerHTML = "";
-    data.forEach(row => {
-      const div = document.createElement("div");
-      div.className = "dropdown-item";
-      div.textContent =
-        `${row.item_code} | ${row.item_name} | LOT:${row.lot || "-"} | ${row.location} | 재고:${row.qty}`;
-
-      div.onclick = () => {
-        itemInput.value = row.item_code;
-        location.value = row.location || "";
-        brand.value = row.brand || "";
-        item_name.value = row.item_name || "";
-        lot.value = row.lot || "";
-        spec.value = row.spec || "";
-
-        availableQty = Number(row.qty || 0);
-        qtyInput.max = availableQty;
-        submitBtn.disabled = false;
-
-        dropdown.classList.add("hidden");
-        qtyInput.focus();
-      };
-      dropdown.appendChild(div);
-    });
-
-    dropdown.classList.remove("hidden");
-  }, 300);
-});
-
-/* =========================
-   수량 초과 방지
-========================= */
-qtyInput.addEventListener("input", () => {
-  const v = Number(qtyInput.value);
-
-  if (availableQty === null || v <= 0) {
-    submitBtn.disabled = true;
+/* =====================
+   재고 선택 모달 열기
+===================== */
+document.getElementById("btnSelectStock").onclick = async () => {
+  const code = itemCode.value.trim();
+  if (!code) {
+    alert("품번을 먼저 입력하세요");
     return;
   }
 
-  if (v > availableQty) {
+  const res = await fetch(`/api/inventory/by-item?item_code=${encodeURIComponent(code)}`);
+  const data = await res.json();
+
+  tbody.innerHTML = "";
+  if (!data.items.length) {
+    alert("출고 가능한 재고가 없습니다");
+    return;
+  }
+
+  data.items.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.location}</td>
+      <td>${r.lot}</td>
+      <td>${r.spec}</td>
+      <td>${r.qty}</td>
+    `;
+    tr.onclick = () => {
+      location.value = r.location;
+      brand.value = r.brand;
+      item_name.value = r.item_name;
+      lot.value = r.lot;
+      spec.value = r.spec;
+
+      selectedQty = Number(r.qty);
+      qtyInput.max = selectedQty;
+      remainQty.textContent = `남은 재고: ${selectedQty}`;
+
+      submitBtn.disabled = false;
+      modal.style.display = "none";
+      qtyInput.focus();
+    };
+    tbody.appendChild(tr);
+  });
+
+  modal.style.display = "block";
+};
+
+document.getElementById("btnCloseModal").onclick = () => {
+  modal.style.display = "none";
+};
+
+/* =====================
+   수량 초과 방지
+===================== */
+qtyInput.addEventListener("input", () => {
+  const v = Number(qtyInput.value);
+  if (!selectedQty || v <= 0 || v > selectedQty) {
     submitBtn.disabled = true;
-    qtyInput.setCustomValidity(
-      `출고 수량이 현재고(${availableQty})를 초과했습니다`
-    );
+    qtyInput.setCustomValidity(`출고 수량은 ${selectedQty} 이하로 입력하세요`);
   } else {
     qtyInput.setCustomValidity("");
     submitBtn.disabled = false;
   }
 });
 
-/* =========================
+/* =====================
    출고 처리
-========================= */
+===================== */
 f.addEventListener("submit", async (e) => {
   e.preventDefault();
   submitBtn.disabled = true;
