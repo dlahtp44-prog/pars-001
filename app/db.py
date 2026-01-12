@@ -271,6 +271,64 @@ def resolve_inventory_brand_and_name(
 # =====================================================
 # INVENTORY
 # =====================================================
+def get_inventory_by_item_code(
+    *, item_code: str, warehouse: str | None = None
+) -> List[Dict[str, Any]]:
+    """
+    출고용 재고 조회
+    - 품번 기준
+    - qty > 0 인 현재고만
+    - 로케이션/LOT/규격 선택용
+    """
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+
+        where = ["item_code = ?", "qty > 0"]
+        params: list[Any] = [_norm(item_code)]
+
+        if warehouse:
+            where.append("warehouse = ?")
+            params.append(_norm(warehouse))
+
+        sql = f"""
+            SELECT
+                warehouse,
+                location,
+                brand,
+                item_code,
+                item_name,
+                lot,
+                spec,
+                qty
+            FROM inventory
+            WHERE {" AND ".join(where)}
+            ORDER BY
+                warehouse,
+                location,
+                lot,
+                spec
+        """
+
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+        return [
+            {
+                "warehouse": r["warehouse"],
+                "location": r["location"],
+                "brand": r["brand"],
+                "item_code": r["item_code"],
+                "item_name": r["item_name"],
+                "lot": r["lot"],
+                "spec": r["spec"],
+                "qty": _q3(r["qty"]),
+            }
+            for r in rows
+        ]
+
+    finally:
+        conn.close()
 
 def upsert_inventory(
     warehouse, location, brand, item_code, item_name,
