@@ -20,9 +20,9 @@ def get_db() -> sqlite3.Connection:
 def _q3(val) -> float:
     if val is None:
         return 0.0
-    return float(Decimal(str(val)).quantize(
-        Decimal("0.000"), rounding=ROUND_HALF_UP
-    ))
+    return float(
+        Decimal(str(val)).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
+    )
 
 
 def _norm(v: Optional[str]) -> str:
@@ -37,14 +37,10 @@ def _add_column_if_not_exists(cur, table: str, column: str, ddl: str):
 
 
 # =====================================================
-# ADMIN / MAINTENANCE
+# ADMIN
 # =====================================================
 
 def reset_inventory_and_history():
-    """
-    ⚠️ 재고 + 이력 전체 초기화 (운영자 전용)
-    - users/login 계정은 절대 삭제하지 않음
-    """
     conn = get_db()
     try:
         cur = conn.cursor()
@@ -88,7 +84,7 @@ def init_db() -> None:
         """)
 
         # =====================
-        # USERS (LOGIN)
+        # USERS
         # =====================
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -98,21 +94,14 @@ def init_db() -> None:
             )
         """)
 
-        # ✅ 기본 계정 SEED (없을 때만 생성)
-        default_users = [
-            "양동규",
-            "박상칠",
-            "김광현",
-            "이모세",
-            "인어진",
-            "user1",
-        ]
+        default_users = ["양동규","박상칠","김광현","이모세","인어진","user1"]
         now = datetime.now().isoformat(timespec="seconds")
         for u in default_users:
             cur.execute("""
                 INSERT OR IGNORE INTO users (username, password, updated_at)
                 VALUES (?, ?, ?)
             """, (_norm(u), "1234", now))
+
         # =====================
         # HISTORY
         # =====================
@@ -135,22 +124,17 @@ def init_db() -> None:
             )
         """)
 
-        # 🔥 기존 DB 마이그레이션 (컬럼 먼저!)
+        # --- migration ---
         _add_column_if_not_exists(cur, "history", "batch_id", "batch_id TEXT")
         _add_column_if_not_exists(cur, "history", "rolled_back", "rolled_back INTEGER NOT NULL DEFAULT 0")
         _add_column_if_not_exists(cur, "history", "rollback_at", "rollback_at TEXT")
         _add_column_if_not_exists(cur, "history", "rollback_by", "rollback_by TEXT")
         _add_column_if_not_exists(cur, "history", "rollback_note", "rollback_note TEXT")
 
-        # 🔥 인덱스는 컬럼 생성 후
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)"
-        )
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_history_batch ON history (batch_id)"
-        )
+        conn.commit()  # 🔥 컬럼 먼저 확정
 
-
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON history (created_at)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_history_batch ON history (batch_id)")
 
         # =====================
         # DAMAGE CODES
@@ -165,12 +149,10 @@ def init_db() -> None:
                 is_active INTEGER NOT NULL DEFAULT 1
             )
         """)
-
         cur.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS ux_damage_codes_key
             ON damage_codes (category, type, situation)
         """)
-
         # =====================
         # DAMAGE CODE SEED (안정판)
         # =====================
@@ -381,40 +363,62 @@ def query_inventory(
 def add_history(
     type, warehouse, operator, brand, item_code, item_name,
     lot, spec, from_location, to_location, qty,
-    note="", dedup_seconds=5
+    note="", batch_id=None, dedup_seconds=5
 ):
     conn = get_db()
     try:
         cur = conn.cursor()
-        now = datetime.now()
-        threshold = (now - timedelta(seconds=dedup_seconds)).isoformat(timespec="seconds")
+        now_dt = datetime.now()
+        now = now_dt.isoformat(timespec="seconds")
+        threshold = (now_dt - timedelta(seconds=dedup_seconds)).isoformat(timespec="seconds")
 
         cur.execute("""
             SELECT COUNT(*) FROM history
             WHERE type=? AND warehouse=? AND item_code=? AND lot=? AND spec=?
-              AND from_location=? AND to_location=?
+              AND from_location=? AND to_location=? AND qty=?
               AND created_at >= ?
-        """, (_norm(type), _norm(warehouse), _norm(item_code),
-              _norm(lot), _norm(spec),
-              _norm(from_location), _norm(to_location), threshold))
-
+        """, (
+            _norm(type), _norm(warehouse), _norm(item_code),
+            _norm(lot), _norm(spec),
+            _norm(from_location), _norm(to_location),
+            _q3(qty), threshold
+        ))
         if cur.fetchone()[0] > 0:
             return
 
-        cur.execute("""
-            INSERT INTO history
-            (type, warehouse, operator, brand, item_code, item_name, lot, spec,
-             from_location, to_location, qty, note, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (_norm(type), _norm(warehouse), _norm(operator), _norm(brand),
-              _norm(item_code), _norm(item_name), _norm(lot), _norm(spec),
-              _norm(from_location), _norm(to_location),
-              _q3(qty), _norm(note), now.isoformat(timespec="seconds")))
+        cur.execute("PRAGMA table_info(history)")
+        cols = {r["name"] for r in cur.fetchall()}
+
+        if "batch_id" in cols:
+            cur.execute("""
+                INSERT INTO history
+                (type, warehouse, operator, brand, item_code, item_name,
+                 lot, spec, from_location, to_location, qty, note, batch_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                _norm(type), _norm(warehouse), _norm(operator), _norm(brand),
+                _norm(item_code), _norm(item_name),
+                _norm(lot), _norm(spec),
+                _norm(from_location), _norm(to_location),
+                _q3(qty), _norm(note), batch_id, now
+            ))
+        else:
+            cur.execute("""
+                INSERT INTO history
+                (type, warehouse, operator, brand, item_code, item_name,
+                 lot, spec, from_location, to_location, qty, note, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                _norm(type), _norm(warehouse), _norm(operator), _norm(brand),
+                _norm(item_code), _norm(item_name),
+                _norm(lot), _norm(spec),
+                _norm(from_location), _norm(to_location),
+                _q3(qty), _norm(note), now
+            ))
 
         conn.commit()
     finally:
         conn.close()
-
 
 # =====================================================
 # ROLLBACK
