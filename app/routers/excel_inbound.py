@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import openpyxl
 import io
+from datetime import datetime
 
 from app.db import upsert_inventory, add_history
 from app.utils.excel_kor_columns import build_col_index
@@ -34,6 +35,8 @@ async def excel_inbound(
       - 수량 > 0 : 재고 증가 + 이력
       - 수량 = 0 or 빈값 : 재고 변화 없음 + 이력
       - 수량 < 0 : 에러
+
+    📌 엑셀 업로드 1회 = batch_id 1개 (롤백 단위)
     """
 
     if not file.filename.lower().endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
@@ -41,6 +44,9 @@ async def excel_inbound(
             status_code=400,
             detail="엑셀(.xlsx) 파일만 업로드 가능합니다."
         )
+
+    # ✅ 엑셀 업로드 단위 batch_id 생성
+    batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_excel_inbound")
 
     data = await file.read()
     wb = openpyxl.load_workbook(
@@ -74,6 +80,7 @@ async def excel_inbound(
         ws.iter_rows(min_row=2, values_only=True),
         start=2
     ):
+        # 완전 빈 행 스킵
         if row is None or all(v is None or str(v).strip() == "" for v in row):
             continue
 
@@ -144,6 +151,7 @@ async def excel_inbound(
                 location,
                 qty,
                 note,
+                batch_id=batch_id,   # 🔥 엑셀 업로드 롤백 키
             )
 
             success += 1
@@ -159,5 +167,6 @@ async def excel_inbound(
         "ok": True,
         "success": success,
         "fail": fail,
+        "batch_id": batch_id,   # 👈 프론트/로그용
         "errors": errors[:50],
     }
