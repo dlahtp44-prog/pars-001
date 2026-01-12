@@ -71,6 +71,7 @@ from app.pages.erp_verify import router as erp_verify_page_router
 # 📅 PC 달력 페이지
 from app.pages.calendar import router as calendar_page_router
 
+from app.routers import excel_history
 
 # 로그인 → 메인 순서 중요
 app.include_router(login_router)
@@ -91,7 +92,7 @@ app.include_router(erp_verify_page_router)
 # ✅ PC 달력
 app.include_router(calendar_page_router)
 
-
+app.include_router(excel_history.router) 
 # =========================
 # MOBILE
 # =========================
