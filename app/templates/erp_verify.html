@@ -13,7 +13,8 @@
 
     <p class="small">
       ERP 현재고 엑셀(.xlsx)을 업로드하면 WMS 재고와 비교합니다.<br/>
-      비교키는 품번/LOT/규격이 있는 만큼 사용하며, 단위가 다르면 품번 단위로 합산 비교합니다.
+      비교키는 품번/LOT/규격이 있는 만큼 사용하며,
+      단위가 다르면 품번 단위로 합산 비교합니다.
     </p>
 
     {% if error %}
@@ -22,6 +23,7 @@
       </div>
     {% endif %}
 
+    <!-- 업로드 폼 -->
     <form method="post" enctype="multipart/form-data" style="margin-top:12px;">
       <label>ERP 현재고 엑셀</label>
       <input type="file" name="file" accept=".xlsx" required/>
@@ -34,6 +36,7 @@
     {% if result %}
       <hr style="margin:16px 0; opacity:0.25;"/>
 
+      <!-- 요약 -->
       <div class="grid2">
         <div><b>총 비교 행</b><br/>{{ result.summary.total }}</div>
         <div><b>✅ 일치</b><br/>{{ result.summary.match }}</div>
@@ -43,8 +46,14 @@
         <div><b>❓ 단위차이(롤업)</b><br/>{{ result.summary.rollup }}</div>
       </div>
 
+      <!-- 엑셀 다운로드 버튼 -->
+      <div style="margin-top:12px;">
+        <button id="btnExcel" class="btn">📥 검증 결과 엑셀 다운로드</button>
+      </div>
+
+      <!-- 결과 테이블 -->
       <div style="overflow:auto; margin-top:14px;">
-        <table>
+        <table id="resultTable">
           <thead>
             <tr>
               <th>상태</th>
@@ -76,8 +85,58 @@
         </table>
       </div>
     {% endif %}
-
   </div>
 </div>
+
+{% if result %}
+<script>
+document.getElementById("btnExcel").onclick = async () => {
+  const rows = [];
+  const trs = document.querySelectorAll("#resultTable tbody tr");
+
+  trs.forEach(tr => {
+    const tds = tr.querySelectorAll("td");
+    rows.push({
+      status: tds[0].innerText.trim(),
+      mode: tds[1].innerText.trim(),
+      item_code: tds[2].innerText.trim(),
+      lot: tds[3].innerText.trim(),
+      spec: tds[4].innerText.trim(),
+      erp_qty: Number(tds[5].innerText.trim()),
+      wms_qty: Number(tds[6].innerText.trim()),
+      diff: Number(tds[7].innerText.trim()),
+      note: tds[8].innerText.trim(),
+    });
+  });
+
+  if (!rows.length) {
+    alert("다운로드할 데이터가 없습니다.");
+    return;
+  }
+
+  const res = await fetch("/api/erp/verify/download", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(rows),
+  });
+
+  if (!res.ok) {
+    alert("엑셀 다운로드 실패");
+    return;
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "erp_verify_result.xlsx";
+  a.click();
+
+  window.URL.revokeObjectURL(url);
+};
+</script>
+{% endif %}
+
 </body>
 </html>
