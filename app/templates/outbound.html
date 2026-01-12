@@ -112,10 +112,16 @@
 </div>
 
 <script>
+/* =========================
+   출고 수량 초과 방지용
+========================= */
+let availableQty = null;   // ← ★ 여기 ★
+
 const itemInput = document.getElementById("item_code");
 const dropdown = document.getElementById("dropdown");
 const qtyInput = document.getElementById("qty");
 const submitBtn = document.getElementById("submitBtn");
+
 
 let debounceTimer = null;
 
