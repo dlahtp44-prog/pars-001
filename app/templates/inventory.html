@@ -11,46 +11,88 @@
   <div class="card">
     <h2>재고현황</h2>
 
-    <form method="get" action="/page/inventory">
-      <div class="grid2">
-        <div>
-          <label>창고</label>
-          <input name="warehouse" value="{{warehouse}}" placeholder="예: A"/>
-        </div>
-        <div>
-          <label>로케이션</label>
-          <input name="location" value="{{location}}" placeholder="예: B01-01-02-A"/>
-        </div>
-        <div>
-          <label>브랜드</label>
-          <input name="brand" value="{{brand}}" placeholder="예: PARS"/>
-        </div>
-        <div>
-          <label>품번</label>
-          <input name="item_code" value="{{item_code}}" placeholder="예: 766109"/>
-        </div>
-        <div>
-          <label>LOT</label>
-          <input name="lot" value="{{lot}}" placeholder="예: E465"/>
-        </div>
-        <div>
-          <label>규격</label>
-          <input name="spec" value="{{spec}}" placeholder="예: 1200*2400*6"/>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+    <!-- ========================= -->
+    <!-- 🔍 v1.7 한 줄 통합 검색 -->
+    <!-- ========================= -->
+    <form method="get" action="/page/inventory" style="margin-bottom:12px;">
+      <label>통합 검색</label>
+      <input
+        type="text"
+        name="q"
+        value="{{ q }}"
+        placeholder="로케이션 / 품번 / 브랜드 / LOT"
+        autofocus
+      />
+      <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
         <button class="btn" type="submit">검색</button>
 
         <a class="btn"
-           href="/page/inventory/excel?warehouse={{warehouse}}&location={{location}}&brand={{brand}}&item_code={{item_code}}&lot={{lot}}&spec={{spec}}">
-          엑셀 다운로드
+           href="/page/inventory/excel?q={{ q }}">
+          엑셀 전체 다운로드
         </a>
 
         <a class="btn secondary" href="/">메인</a>
       </div>
     </form>
 
+    <hr style="margin:16px 0; opacity:0.3;"/>
+
+    <!-- ========================= -->
+    <!-- 🔎 기존 상세 검색 (유지) -->
+    <!-- ========================= -->
+    <details>
+      <summary style="cursor:pointer; margin-bottom:8px;">
+        상세 검색 열기
+      </summary>
+
+      <form method="get" action="/page/inventory">
+        <div class="grid2">
+          <div>
+            <label>창고</label>
+            <input name="warehouse" value="{{warehouse}}" placeholder="예: A"/>
+          </div>
+          <div>
+            <label>로케이션</label>
+            <input name="location" value="{{location}}" placeholder="예: B01-01-02-A"/>
+          </div>
+          <div>
+            <label>브랜드</label>
+            <input name="brand" value="{{brand}}" placeholder="예: PARS"/>
+          </div>
+          <div>
+            <label>품번</label>
+            <input name="item_code" value="{{item_code}}" placeholder="예: 766109"/>
+          </div>
+          <div>
+            <label>LOT</label>
+            <input name="lot" value="{{lot}}" placeholder="예: E465"/>
+          </div>
+          <div>
+            <label>규격</label>
+            <input name="spec" value="{{spec}}" placeholder="예: 1200*2400*6"/>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+          <button class="btn" type="submit">검색</button>
+
+          <a class="btn"
+             href="/page/inventory/excel
+               ?warehouse={{warehouse}}
+               &location={{location}}
+               &brand={{brand}}
+               &item_code={{item_code}}
+               &lot={{lot}}
+               &spec={{spec}}">
+            엑셀 다운로드
+          </a>
+        </div>
+      </form>
+    </details>
+
+    <!-- ========================= -->
+    <!-- 📋 결과 테이블 -->
+    <!-- ========================= -->
     <div style="overflow:auto; margin-top:14px;">
       <table>
         <thead>
@@ -87,8 +129,10 @@
     </div>
 
     <p class="small" style="margin-top:10px;">
-      검색조건: 로케이션 / 품번 / LOT / 브랜드 (운영매뉴얼 기준)
+      • 통합 검색: 로케이션 / 품번 / 브랜드 / LOT 자동 판별<br/>
+      • 엑셀 다운로드: 현재 검색 조건 그대로 출력
     </p>
+
   </div>
 </div>
 </body>
