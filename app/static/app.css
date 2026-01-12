@@ -480,3 +480,134 @@ tr[data-batch]:hover {
   .calendar-date { font-size: 11px; }
   .calendar-memo { font-size: 11px; }
 }
+/* =====================================================
+   🚚 OUTBOUND (출고) – MODAL & UX
+===================================================== */
+
+/* 출고재고선택 버튼 (폼 안에서 버튼처럼 보이게) */
+#btnSelectStock {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #2a2f3a;
+  background: #202736;
+  color: #e6e6e6;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+#btnSelectStock:hover {
+  filter: brightness(1.1);
+}
+
+/* 모달 오버레이 */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1200;
+}
+
+/* 모달 컨텐츠 */
+.modal-content {
+  background: #171a21;
+  border: 1px solid #2a2f3a;
+  border-radius: 14px;
+  max-width: 820px;
+  margin: 6% auto;
+  padding: 16px;
+  color: #e6e6e6;
+}
+
+/* 모달 제목 */
+.modal-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* 출고 재고 선택 테이블 */
+#stockTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#stockTable th,
+#stockTable td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #2a2f3a;
+  text-align: center;
+}
+
+#stockTable th {
+  color: #b9c0cf;
+  font-weight: 800;
+}
+
+/* 선택 가능한 행 hover */
+#stockTable tbody tr {
+  cursor: pointer;
+}
+#stockTable tbody tr:hover {
+  background: rgba(138, 180, 255, 0.08);
+}
+
+/* 수량 강조 */
+#stockTable td.qty {
+  font-weight: 900;
+  color: #7dffb2;
+}
+
+/* 모달 하단 버튼 영역 */
+.modal-actions {
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* 닫기 버튼 */
+#btnCloseModal {
+  width: auto;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #2a2f3a;
+  background: #202736;
+  color: #e6e6e6;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+#btnCloseModal:hover {
+  filter: brightness(1.1);
+}
+
+/* 출고 남은 재고 표시 */
+#remainQty {
+  font-size: 13px;
+  font-weight: 800;
+  color: #9aa3b5;
+}
+
+/* readonly 입력 필드 시각적 구분 */
+input[readonly] {
+  background: #12151c;
+  color: #b9c0cf;
+  border-style: dashed;
+}
+
+/* 모바일 대응 */
+@media (max-width: 720px) {
+  .modal-content {
+    margin: 10% 10px;
+    padding: 14px;
+  }
+
+  #stockTable {
+    font-size: 12px;
+  }
+
+  #stockTable th,
+  #stockTable td {
+    padding: 8px 6px;
+  }
+}
