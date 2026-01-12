@@ -20,12 +20,16 @@
       border-radius: 8px;
       max-height: 240px;
       overflow-y: auto;
-      z-index: 50;
+      z-index: 999;
     }
     .dropdown-item {
       padding: 8px 10px;
       cursor: pointer;
       font-size: 14px;
+      border-bottom: 1px solid #1f2937;
+    }
+    .dropdown-item:last-child {
+      border-bottom: none;
     }
     .dropdown-item:hover {
       background: #2563eb;
@@ -62,7 +66,14 @@
 
       <label>품번</label>
       <div class="dropdown">
-        <input id="item_code" name="item_code" type="text" autocomplete="off" required>
+        <input
+          id="item_code"
+          name="item_code"
+          type="text"
+          autocomplete="off"
+          placeholder="품번 입력 후 선택"
+          required
+        >
         <div id="dropdown" class="dropdown-list hidden"></div>
       </div>
 
@@ -89,7 +100,7 @@
       <label>비고</label>
       <input name="note" type="text" placeholder="선택">
 
-      <button type="submit">출고 처리</button>
+      <button id="submitBtn" type="submit">출고 처리</button>
     </form>
 
     <pre id="out" class="card" style="white-space:pre-wrap"></pre>
@@ -103,71 +114,97 @@
 <script>
 const itemInput = document.getElementById("item_code");
 const dropdown = document.getElementById("dropdown");
+const qtyInput = document.getElementById("qty");
+const submitBtn = document.getElementById("submitBtn");
 
-itemInput.addEventListener("input", async () => {
-  const q = itemInput.value.trim();
-  if (q.length < 1) {
-    dropdown.classList.add("hidden");
-    return;
-  }
+let debounceTimer = null;
 
-  const res = await fetch(`/api/inventory-search?q=${encodeURIComponent(q)}`);
-  if (!res.ok) {
-    dropdown.classList.add("hidden");
-    return;
-  }
+// =========================
+// 품번 → 재고 검색 (디바운스)
+// =========================
+itemInput.addEventListener("input", () => {
+  clearTimeout(debounceTimer);
 
-  const data = await res.json();
-  if (!data.length) {
-    dropdown.classList.add("hidden");
-    return;
-  }
-
-  dropdown.innerHTML = "";
-  data.forEach(row => {
-    const div = document.createElement("div");
-    div.className = "dropdown-item";
-    div.textContent =
-      `${row.item_code} | ${row.item_name} | LOT:${row.lot || "-"} | ${row.location} | 재고:${row.qty}`;
-
-    div.onclick = () => {
-      itemInput.value = row.item_code;
-      document.getElementById("location").value = row.location || "";
-      document.getElementById("brand").value = row.brand || "";
-      document.getElementById("item_name").value = row.item_name || "";
-      document.getElementById("lot").value = row.lot || "";
-      document.getElementById("spec").value = row.spec || "";
+  debounceTimer = setTimeout(async () => {
+    const q = itemInput.value.trim();
+    if (q.length < 1) {
       dropdown.classList.add("hidden");
-    };
+      return;
+    }
 
-    dropdown.appendChild(div);
-  });
+    const res = await fetch(`/api/inventory-search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) {
+      dropdown.classList.add("hidden");
+      return;
+    }
 
-  dropdown.classList.remove("hidden");
+    const data = await res.json();
+    if (!data.length) {
+      dropdown.classList.add("hidden");
+      return;
+    }
+
+    dropdown.innerHTML = "";
+    data.forEach(row => {
+      const div = document.createElement("div");
+      div.className = "dropdown-item";
+      div.textContent =
+        `${row.item_code} | ${row.item_name} | LOT:${row.lot || "-"} | ${row.location} | 재고:${row.qty}`;
+
+      div.onclick = () => {
+        itemInput.value = row.item_code;
+        document.getElementById("location").value = row.location || "";
+        document.getElementById("brand").value = row.brand || "";
+        document.getElementById("item_name").value = row.item_name || "";
+        document.getElementById("lot").value = row.lot || "";
+        document.getElementById("spec").value = row.spec || "";
+        dropdown.classList.add("hidden");
+
+        // 👉 다음 입력 포커스
+        qtyInput.focus();
+      };
+
+      dropdown.appendChild(div);
+    });
+
+    dropdown.classList.remove("hidden");
+  }, 300);
 });
 
-// 포커스 아웃 시 드롭다운 닫기
+// =========================
+// 외부 클릭 시 드롭다운 닫기
+// =========================
 document.addEventListener("click", (e) => {
   if (!itemInput.contains(e.target) && !dropdown.contains(e.target)) {
     dropdown.classList.add("hidden");
   }
 });
 
+// =========================
 // 출고 처리
+// =========================
 const f = document.getElementById('f');
 const out = document.getElementById('out');
 
 f.addEventListener('submit', async (e) => {
   e.preventDefault();
+  submitBtn.disabled = true;
   out.textContent = '처리중...';
 
-  const fd = new FormData(f);
-  const res = await fetch('/api/outbound', {
-    method: 'POST',
-    body: fd
-  });
+  try {
+    const fd = new FormData(f);
+    const res = await fetch('/api/outbound', {
+      method: 'POST',
+      body: fd
+    });
 
-  out.textContent = await res.text();
+    const text = await res.text();
+    out.textContent = text;
+  } catch (err) {
+    out.textContent = '❌ 출고 처리 중 오류 발생';
+  } finally {
+    submitBtn.disabled = false;
+  }
 });
 </script>
 </body>
