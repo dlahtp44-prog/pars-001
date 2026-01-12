@@ -42,7 +42,6 @@
     <form id="f">
       <div class="form-row">
         <label>창고</label>
-        <!-- ✅ readonly + id 추가 -->
         <input id="warehouse" name="warehouse" readonly required>
       </div>
 
@@ -101,9 +100,7 @@
   </div>
 </div>
 
-<!-- =====================
-     출고 재고 선택 모달
-===================== -->
+<!-- 출고 재고 선택 모달 -->
 <div id="stockModal" class="modal">
   <div class="modal-content">
     <h3>출고 재고 선택</h3>
@@ -130,7 +127,13 @@ let selectedQty = null;
 
 const f = document.getElementById("f");
 const itemCode = document.getElementById("item_code");
-const warehouse = document.getElementById("warehouse"); // ✅ 추가
+const warehouse = document.getElementById("warehouse");
+const locationInput = document.getElementById("location"); // ✅ 핵심
+const brand = document.getElementById("brand");
+const itemName = document.getElementById("item_name");
+const lot = document.getElementById("lot");
+const spec = document.getElementById("spec");
+
 const modal = document.getElementById("stockModal");
 const tbody = document.querySelector("#stockTable tbody");
 const qtyInput = document.getElementById("qty");
@@ -138,9 +141,7 @@ const remainQty = document.getElementById("remainQty");
 const submitBtn = document.getElementById("submitBtn");
 const out = document.getElementById("out");
 
-/* =====================
-   재고 선택 모달 열기
-===================== */
+/* 재고 선택 모달 */
 document.getElementById("btnSelectStock").onclick = async () => {
   const code = itemCode.value.trim();
   if (!code) {
@@ -165,11 +166,12 @@ document.getElementById("btnSelectStock").onclick = async () => {
       <td>${r.spec}</td>
       <td>${r.qty}</td>
     `;
+
     tr.onclick = () => {
-      warehouse.value = r.warehouse;   // ✅ 핵심 수정
-      location.value = r.location;
+      warehouse.value = r.warehouse;
+      locationInput.value = r.location;   // ✅ 정상 동작
       brand.value = r.brand;
-      item_name.value = r.item_name;
+      itemName.value = r.item_name;
       lot.value = r.lot;
       spec.value = r.spec;
 
@@ -181,6 +183,7 @@ document.getElementById("btnSelectStock").onclick = async () => {
       modal.style.display = "none";
       qtyInput.focus();
     };
+
     tbody.appendChild(tr);
   });
 
@@ -191,9 +194,7 @@ document.getElementById("btnCloseModal").onclick = () => {
   modal.style.display = "none";
 };
 
-/* =====================
-   수량 초과 방지
-===================== */
+/* 수량 검증 */
 qtyInput.addEventListener("input", () => {
   const v = Number(qtyInput.value);
   if (!selectedQty || v <= 0 || v > selectedQty) {
@@ -205,9 +206,7 @@ qtyInput.addEventListener("input", () => {
   }
 });
 
-/* =====================
-   출고 처리
-===================== */
+/* 출고 처리 */
 f.addEventListener("submit", async (e) => {
   e.preventDefault();
   submitBtn.disabled = true;
