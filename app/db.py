@@ -514,6 +514,69 @@ def rollback_history(history_id: int, operator: str, note: str = ""):
     finally:
         conn.close()
 
+def rollback_batch(batch_id: str, operator: str, note: str = "") -> int:
+    """
+    엑셀(batch) 전체 롤백
+    inventory는 품목별 합산 후 1회 처리
+    """
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT * FROM history
+            WHERE batch_id = ?
+              AND rolled_back = 0
+              AND type = '입고'
+        """, (batch_id,))
+        rows = cur.fetchall()
+
+        if not rows:
+            return 0
+
+        summary = {}
+        for r in rows:
+            key = (
+                r["warehouse"],
+                r["to_location"],
+                r["brand"],
+                r["item_code"],
+                r["item_name"],
+                r["lot"],
+                r["spec"],
+            )
+            summary[key] = summary.get(key, 0) + r["qty"]
+
+        for (
+            warehouse, location, brand,
+            item_code, item_name, lot, spec
+        ), total_qty in summary.items():
+
+            ok = upsert_inventory(
+                warehouse, location, brand,
+                item_code, item_name,
+                lot, spec,
+                -total_qty,
+                note=f"배치롤백:{batch_id}"
+            )
+            if not ok:
+                raise ValueError("배치 재고 롤백 실패")
+
+        now = datetime.now().isoformat(timespec="seconds")
+        cur.execute("""
+            UPDATE history
+            SET rolled_back = 1,
+                rollback_at = ?,
+                rollback_by = ?,
+                rollback_note = ?
+            WHERE batch_id = ?
+        """, (now, operator, note, batch_id))
+
+        conn.commit()
+        return len(rows)
+
+    finally:
+        conn.close()
 
 # =====================================================
 # DAMAGE / CS
