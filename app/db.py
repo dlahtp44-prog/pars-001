@@ -449,6 +449,51 @@ def query_inventory(
 
     finally:
         conn.close()
+def query_inventory_smart(q: str | None = None, limit: int = 1000):
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+
+        where = ["qty > 0"]
+        params = []
+
+        if q:
+            qn = _norm(q)
+
+            if "-" in qn:  # 로케이션
+                where.append("location LIKE ?")
+                params.append(f"%{qn}%")
+
+            elif qn.isdigit():  # 품번
+                where.append("item_code LIKE ?")
+                params.append(f"%{qn}%")
+
+            elif any(c.isdigit() for c in qn):  # LOT
+                where.append("lot LIKE ?")
+                params.append(f"%{qn}%")
+
+            else:  # 브랜드
+                where.append("brand LIKE ?")
+                params.append(f"%{qn}%")
+
+        sql = f"""
+            SELECT *
+            FROM inventory
+            WHERE {" AND ".join(where)}
+            ORDER BY
+              brand ASC,
+              item_code ASC,
+              location ASC,
+              lot ASC,
+              spec ASC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        cur.execute(sql, params)
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
 
 
 
