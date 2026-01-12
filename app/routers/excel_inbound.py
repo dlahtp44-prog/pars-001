@@ -2,12 +2,25 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import openpyxl
 import io
 from datetime import datetime
+from decimal import Decimal
 
 from app.db import upsert_inventory, add_history
 from app.utils.excel_kor_columns import build_col_index
 
 
 router = APIRouter(prefix="/api/excel/inbound", tags=["excel-inbound"])
+
+
+# =====================================
+# 🔥 수량 파싱 (소수점 절대 보존)
+# =====================================
+def _parse_qty(v) -> float:
+    try:
+        if v is None or str(v).strip() == "":
+            return 0.0
+        return float(Decimal(str(v)))
+    except Exception:
+        raise ValueError("수량 형식 오류")
 
 
 @router.post("")
@@ -104,15 +117,9 @@ async def excel_inbound(
                 raise ValueError("필수 값(창고/로케이션/품번) 누락")
 
             # ===============================
-            # 수량 해석 (핵심)
+            # 🔥 수량 해석 (소수점 유지)
             # ===============================
-            if qty_raw is None or str(qty_raw).strip() == "":
-                qty = 0
-            else:
-                try:
-                    qty = int(qty_raw)
-                except Exception:
-                    raise ValueError("수량 형식 오류")
+            qty = _parse_qty(qty_raw)
 
             if qty < 0:
                 raise ValueError("수량은 0 이상만 허용")
@@ -129,7 +136,7 @@ async def excel_inbound(
                     item_name=item_name,
                     lot=lot,
                     spec=spec,
-                    qty_delta=qty,
+                    qty_delta=qty,   # 🔥 소수점 그대로
                     note=note,
                 )
                 if not ok:
@@ -149,9 +156,9 @@ async def excel_inbound(
                 spec,
                 "",
                 location,
-                qty,
+                qty,               # 🔥 이력도 동일 수량
                 note,
-                batch_id=batch_id,   # 🔥 엑셀 업로드 롤백 키
+                batch_id=batch_id,
             )
 
             success += 1
@@ -167,6 +174,6 @@ async def excel_inbound(
         "ok": True,
         "success": success,
         "fail": fail,
-        "batch_id": batch_id,   # 👈 프론트/로그용
+        "batch_id": batch_id,
         "errors": errors[:50],
     }
