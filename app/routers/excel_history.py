@@ -17,14 +17,25 @@ def download_history_excel(
 ):
     rows = query_history(year=year, month=month, day=day, limit=5000)
 
+    # 🔥 핵심: utf-8-sig (BOM 포함)
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # 헤더
+    # ✅ 컬럼명 (엑셀용 한글)
     writer.writerow([
-        "시간", "유형", "창고", "출발", "도착",
-        "브랜드", "품번", "품명", "LOT", "규격",
-        "수량", "비고", "작업자"
+        "시간",
+        "유형",
+        "창고",
+        "출발지",
+        "도착지",
+        "브랜드",
+        "품번",
+        "품명",
+        "LOT",
+        "규격",
+        "수량",
+        "비고",
+        "작업자",
     ])
 
     for r in rows:
@@ -44,13 +55,16 @@ def download_history_excel(
             r["operator"],
         ])
 
-    output.seek(0)
+    csv_text = output.getvalue()
+    output.close()
 
-    filename = "history_export.csv"
+    # 🔥 BOM 붙이기
+    bom_csv = "\ufeff" + csv_text
+
     return StreamingResponse(
-        output,
-        media_type="text/csv",
+        io.BytesIO(bom_csv.encode("utf-8")),
+        media_type="text/csv; charset=utf-8",
         headers={
-            "Content-Disposition": f"attachment; filename={filename}"
+            "Content-Disposition": "attachment; filename=history_export.csv"
         }
     )
