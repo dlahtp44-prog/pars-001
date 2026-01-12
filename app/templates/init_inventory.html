@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>초기 재고 세팅 | PARS WMS</title>
+
+  <style>
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .row > div { flex:1; min-width:240px; }
+
+    .box {
+      border: 1px solid #2a2f3a;
+      border-radius: 14px;
+      padding: 14px;
+      background: #12151c;
+      margin-top: 12px;
+    }
+
+    .badge2 {
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      border:1px solid rgba(255,255,255,0.12);
+      margin-right:6px;
+    }
+    .b-ok { background: rgba(39, 174, 96, 0.18); color:#7dffb2; }
+    .b-err { background: rgba(231, 76, 60, 0.18); color:#ff9f96; }
+    .b-warn { background: rgba(241, 196, 15, 0.14); color:#ffd26a; }
+
+    .btnline { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .btnline button, .btnline a { flex:1; }
+
+    .mini { font-size:12px; color:#9aa3b5; line-height:1.5; }
+
+    table { font-size: 13px; }
+    td, th { white-space: nowrap; }
+    td.wrap { white-space: normal; }
+    .scroll { overflow:auto; max-height: 420px; border-radius: 12px; border:1px solid #2a2f3a; }
+
+    .danger {
+      border:1px solid rgba(255,107,107,0.35);
+      background: rgba(255,107,107,0.10);
+      color:#ffb3b3;
+      padding: 10px 12px;
+      border-radius: 12px;
+      margin-top: 10px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="card">
+
+    <div class="header-bar">
+      <h2>🧙‍♂️ 초기 재고 세팅 (마법사)</h2>
+      <a href="/logout" class="logout-btn">로그아웃</a>
+    </div>
+
+    <div class="danger">
+      ⚠️ 주의: 이 기능은 “운영 입고”가 아니라 “초기 재고 세팅”입니다. <br/>
+      반영 시 이력은 <b>type=초기재고</b>, from_location=INIT 으로 기록됩니다.
+    </div>
+
+    <!-- 입력 -->
+    <div class="box">
+      <div class="row">
+        <div>
+          <label>작업자(관리자)</label>
+          <input id="operator" type="text" placeholder="예: 이모세" required>
+          <div class="mini">※ commit 시 필수</div>
+        </div>
+
+        <div>
+          <label>초기 재고 엑셀 (기존 입고 양식과 동일)</label>
+          <input id="file" type="file" accept=".xlsx" required>
+          <div class="mini">필수 컬럼: 창고, 로케이션, 품번, LOT, 규격, 수량</div>
+        </div>
+
+        <div>
+          <label>강제 진행(force)</label>
+          <select id="force">
+            <option value="0">권장(재고 0건일 때만)</option>
+            <option value="1">강제(기존 재고 있어도 누적 반영)</option>
+          </select>
+          <div class="mini">※ inventory가 이미 있으면 권장 모드에서 막힙니다.</div>
+        </div>
+      </div>
+
+      <div class="btnline">
+        <button id="btnPreview" type="button">1) 업로드 & 검증(미리보기)</button>
+        <button id="btnCommit" type="button" disabled>2) 초기재고 반영(커밋)</button>
+        <a class="menu-btn" href="/" style="margin:0;">메인</a>
+      </div>
+
+      <div class="mini" style="margin-top:10px;">
+        커밋은 내부적으로 <b>confirm=INIT-CONFIRM</b>으로 보호됩니다.
+      </div>
+    </div>
+
+    <!-- 미리보기 요약 -->
+    <div id="summaryBox" class="box" style="display:none;">
+      <div>
+        <span class="badge2 b-ok">정상</span> <b id="okCount">0</b> 행
+        &nbsp;&nbsp;
+        <span class="badge2 b-err">오류</span> <b id="errCount">0</b> 행
+        &nbsp;&nbsp;
+        <span class="badge2 b-warn">현재 DB</span>
+        inventory: <b id="invCount">0</b> / history: <b id="hisCount">0</b>
+      </div>
+      <div class="mini" id="msg" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- 오류 행 표시 -->
+    <div id="errBox" class="box" style="display:none;">
+      <h3 style="margin:0 0 10px 0;">❌ 오류 행</h3>
+      <div class="scroll">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+          <tr>
+            <th style="text-align:left;">row</th>
+            <th style="text-align:left;">error</th>
+            <th style="text-align:left;">raw</th>
+          </tr>
+          </thead>
+          <tbody id="errTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 정상 행 미리보기 -->
+    <div id="okBox" class="box" style="display:none;">
+      <h3 style="margin:0 0 10px 0;">✅ 정상 행(미리보기)</h3>
+      <div class="mini">※ 화면에는 최대 2000행까지만 표시됩니다.</div>
+      <div class="scroll" style="margin-top:10px;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+          <tr>
+            <th>창고</th>
+            <th>로케이션</th>
+            <th>브랜드</th>
+            <th>품번</th>
+            <th>품명</th>
+            <th>LOT</th>
+            <th>규격</th>
+            <th style="text-align:right;">수량</th>
+            <th>비고</th>
+          </tr>
+          </thead>
+          <tbody id="okTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 커밋 결과 -->
+    <div id="commitBox" class="box" style="display:none;">
+      <h3 style="margin:0 0 10px 0;">📌 반영 결과</h3>
+      <pre id="commitOut" style="white-space:pre-wrap; margin:0;"></pre>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const fileEl = $("file");
+const operatorEl = $("operator");
+const forceEl = $("force");
+const btnPreview = $("btnPreview");
+const btnCommit = $("btnCommit");
+
+const summaryBox = $("summaryBox");
+const okBox = $("okBox");
+const errBox = $("errBox");
+const commitBox = $("commitBox");
+
+const okTbody = $("okTbody");
+const errTbody = $("errTbody");
+
+let lastPreviewOkRows = 0;
+
+// -----------------------------
+// helper
+// -----------------------------
+function esc(s){
+  s = (s ?? "").toString();
+  return s.replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+function setLoading(btn, on){
+  btn.disabled = on;
+  btn.textContent = on ? "처리중..." : btn.dataset.label;
+}
+
+btnPreview.dataset.label = btnPreview.textContent;
+btnCommit.dataset.label = btnCommit.textContent;
+
+// -----------------------------
+// 1) Preview
+// -----------------------------
+btnPreview.addEventListener("click", async () => {
+  commitBox.style.display = "none";
+  btnCommit.disabled = true;
+
+  const f = fileEl.files?.[0];
+  if (!f) { alert("엑셀 파일을 선택하세요"); return; }
+
+  setLoading(btnPreview, true);
+
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+
+    const res = await fetch("/api/init/preview", { method:"POST", body: fd });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data?.detail || "미리보기 실패");
+      return;
+    }
+
+    // summary
+    summaryBox.style.display = "block";
+    $("okCount").textContent = data.summary.ok_rows;
+    $("errCount").textContent = data.summary.error_rows;
+    $("invCount").textContent = data.inventory_count;
+    $("hisCount").textContent = data.history_count;
+    $("msg").textContent = data.message || "";
+
+    // table render
+    okTbody.innerHTML = "";
+    errTbody.innerHTML = "";
+
+    // ok rows
+    const okRows = data.rows_ok || [];
+    lastPreviewOkRows = okRows.length;
+
+    if (okRows.length) {
+      okBox.style.display = "block";
+      okRows.slice(0, 2000).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${esc(r.warehouse)}</td>
+          <td>${esc(r.location)}</td>
+          <td>${esc(r.brand)}</td>
+          <td><b>${esc(r.item_code)}</b></td>
+          <td class="wrap">${esc(r.item_name)}</td>
+          <td>${esc(r.lot)}</td>
+          <td>${esc(r.spec)}</td>
+          <td style="text-align:right;"><b>${esc(r.qty)}</b></td>
+          <td class="wrap">${esc(r.note)}</td>
+        `;
+        okTbody.appendChild(tr);
+      });
+    } else {
+      okBox.style.display = "none";
+    }
+
+    // err rows
+    const errRows = data.rows_error || [];
+    if (errRows.length) {
+      errBox.style.display = "block";
+      errRows.slice(0, 500).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${esc(r.rownum)}</td>
+          <td class="wrap">${esc(r.error)}</td>
+          <td class="wrap"><code>${esc(JSON.stringify(r.raw))}</code></td>
+        `;
+        errTbody.appendChild(tr);
+      });
+    } else {
+      errBox.style.display = "none";
+    }
+
+    // commit button enable 조건
+    if (lastPreviewOkRows > 0) {
+      btnCommit.disabled = false;
+    }
+
+  } catch (e) {
+    alert("미리보기 중 오류 발생");
+    console.error(e);
+  } finally {
+    setLoading(btnPreview, false);
+  }
+});
+
+// -----------------------------
+// 2) Commit
+// -----------------------------
+btnCommit.addEventListener("click", async () => {
+  const f = fileEl.files?.[0];
+  if (!f) { alert("엑셀 파일을 선택하세요"); return; }
+  const operator = operatorEl.value.trim();
+  if (!operator) { alert("작업자(관리자)를 입력하세요"); return; }
+
+  const force = forceEl.value;
+
+  if (!confirm("정말로 초기재고를 반영할까요? (이 작업은 이력에 기록됩니다)")) return;
+
+  setLoading(btnCommit, true);
+
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+    fd.append("operator", operator);
+    fd.append("confirm", "INIT-CONFIRM"); // ✅ 보호문구
+    fd.append("force", force);
+
+    const res = await fetch("/api/init/commit", { method:"POST", body: fd });
+    const text = await res.text();
+
+    commitBox.style.display = "block";
+    $("commitOut").textContent = text;
+
+    if (!res.ok) {
+      alert("커밋 실패. 아래 결과를 확인하세요.");
+      return;
+    }
+
+    alert("초기재고 반영 완료!");
+    btnCommit.disabled = true;
+
+  } catch (e) {
+    alert("커밋 중 오류 발생");
+    console.error(e);
+  } finally {
+    setLoading(btnCommit, false);
+  }
+});
+</script>
+</body>
+</html>
