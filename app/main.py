@@ -67,7 +67,7 @@ from app.pages.calendar import router as calendar_page_router
 from app.routers.excel_history import router as excel_history_router
 from app.routers.api_rollback_batch import router as api_rollback_batch_router
 from app.routers import api_admin_reset
-
+from app.routers import api_init_inventory
 
 app.include_router(login_router)
 app.include_router(index_router)
@@ -86,6 +86,7 @@ app.include_router(erp_verify_page_router)
 app.include_router(calendar_page_router)
 app.include_router(api_rollback_batch_router)
 app.include_router(api_admin_reset.router)
+app.include_router(api_init_inventory.router)
 
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
