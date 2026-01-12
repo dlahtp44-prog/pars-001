@@ -2,24 +2,33 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import openpyxl
 import io
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from app.db import upsert_inventory, add_history
 from app.utils.excel_kor_columns import build_col_index
-
 
 router = APIRouter(prefix="/api/excel/inbound", tags=["excel-inbound"])
 
 
 # =====================================
 # 🔥 수량 파싱 (소수점 절대 보존)
+# - 1,234.56 콤마 제거
+# - 1E-3 같은 과학표기도 안전 처리
 # =====================================
 def _parse_qty(v) -> float:
+    if v is None:
+        return 0.0
+
+    s = str(v).strip()
+    if s == "":
+        return 0.0
+
+    # 콤마 제거 (예: 1,234.56)
+    s = s.replace(",", "")
+
     try:
-        if v is None or str(v).strip() == "":
-            return 0.0
-        return float(Decimal(str(v)))
-    except Exception:
+        return float(Decimal(s))
+    except (InvalidOperation, ValueError):
         raise ValueError("수량 형식 오류")
 
 
@@ -53,34 +62,26 @@ async def excel_inbound(
     """
 
     if not file.filename.lower().endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
-        raise HTTPException(
-            status_code=400,
-            detail="엑셀(.xlsx) 파일만 업로드 가능합니다."
-        )
+        raise HTTPException(status_code=400, detail="엑셀(.xlsx) 파일만 업로드 가능합니다.")
 
     # ✅ 엑셀 업로드 단위 batch_id 생성
     batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_excel_inbound")
 
     data = await file.read()
-    wb = openpyxl.load_workbook(
-        filename=io.BytesIO(data),
-        data_only=True
-    )
+    wb = openpyxl.load_workbook(filename=io.BytesIO(data), data_only=True)
     ws = wb.active
 
     # ===============================
     # HEADER
     # ===============================
-    headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+    headers = [h for h in header_row]
     idx = build_col_index(headers)
 
     required_cols = ["창고", "로케이션", "품번", "수량"]
     missing = [c for c in required_cols if c not in idx]
     if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"필수 컬럼 누락: {', '.join(missing)}"
-        )
+        raise HTTPException(status_code=400, detail=f"필수 컬럼 누락: {', '.join(missing)}")
 
     success = 0
     fail = 0
@@ -89,10 +90,7 @@ async def excel_inbound(
     # ===============================
     # ROW LOOP
     # ===============================
-    for r_i, row in enumerate(
-        ws.iter_rows(min_row=2, values_only=True),
-        start=2
-    ):
+    for r_i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 완전 빈 행 스킵
         if row is None or all(v is None or str(v).strip() == "" for v in row):
             continue
@@ -113,8 +111,13 @@ async def excel_inbound(
             spec = str(row[idx["규격"]] or "").strip() if "규격" in idx else ""
             note = str(row[idx["비고"]] or "").strip() if "비고" in idx else ""
 
+            # ✅ 필수값 체크
             if not (warehouse and location and item_code):
                 raise ValueError("필수 값(창고/로케이션/품번) 누락")
+
+            # ⚠️ LOT/규격을 필수로 만들고 싶으면 아래 주석 해제
+            # if not (lot and spec):
+            #     raise ValueError("필수 값(LOT/규격) 누락")
 
             # ===============================
             # 🔥 수량 해석 (소수점 유지)
@@ -165,10 +168,7 @@ async def excel_inbound(
 
         except Exception as e:
             fail += 1
-            errors.append({
-                "row": r_i,
-                "error": str(e)
-            })
+            errors.append({"row": r_i, "error": str(e)})
 
     return {
         "ok": True,
