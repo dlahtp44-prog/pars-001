@@ -399,7 +399,7 @@ def query_inventory(
     warehouse=None, location=None, brand=None,
     item_code=None, lot=None, spec=None,
     limit: int = 500
-) -> List[Dict[str, Any]]:
+) -> list[dict]:
     conn = get_db()
     try:
         cur = conn.cursor()
@@ -408,30 +408,48 @@ def query_inventory(
         if warehouse:
             where.append("warehouse LIKE ?")
             params.append(f"%{_norm(warehouse)}%")
+
         if location:
             where.append("location LIKE ?")
             params.append(f"%{_norm(location)}%")
+
         if brand:
             where.append("brand = ?")
             params.append(_norm(brand))
+
         if item_code:
             where.append("item_code LIKE ?")
             params.append(f"%{_norm(item_code)}%")
+
         if lot:
             where.append("lot LIKE ?")
             params.append(f"%{_norm(lot)}%")
+
         if spec:
             where.append("spec LIKE ?")
             params.append(f"%{_norm(spec)}%")
 
-        sql = "SELECT * FROM inventory WHERE " + " AND ".join(where)
-        sql += " ORDER BY updated_at DESC LIMIT ?"
+        sql = """
+            SELECT *
+            FROM inventory
+            WHERE {where}
+            ORDER BY
+                brand ASC,
+                item_code ASC,
+                location ASC,
+                lot ASC,
+                spec ASC
+            LIMIT ?
+        """.format(where=" AND ".join(where))
+
         params.append(limit)
 
         cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
+
     finally:
         conn.close()
+
 
 
 # =====================================================
