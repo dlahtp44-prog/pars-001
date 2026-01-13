@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 @router.get("/from", response_class=HTMLResponse)
 def move_from(request: Request, location: str = ""):
     return templates.TemplateResponse(
-        "mobile/move_from.html",
+        "m/move_start.html",
         {
             "request": request,
             "from_location": location,
@@ -50,7 +50,7 @@ def move_select(
     rows = query_inventory_by_location(from_location)
 
     return templates.TemplateResponse(
-        "mobile/move_select.html",
+        "m/move_select.html",
         {
             "request": request,
             "from_location": from_location,
@@ -96,7 +96,7 @@ def move_to(
     note: str = "",
 ):
     return templates.TemplateResponse(
-        "mobile/move_to.html",
+        "m/move_to.html",
         {
             "request": request,
             "from_location": from_location,
