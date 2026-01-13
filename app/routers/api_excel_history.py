@@ -7,22 +7,40 @@ from app.utils.excel_export import rows_to_xlsx_bytes
 router = APIRouter(prefix="/api/excel/history", tags=["excel-history"])
 
 
+# ============================================
+# 🔧 빈 문자열 안전 처리
+# ============================================
+def _to_int(v: str | None):
+    """
+    "" 또는 None → None
+    "2026" → 2026
+    """
+    if v is None or str(v).strip() == "":
+        return None
+    return int(v)
+
+
 @router.get("")
 def download_history_excel(
-    year: int | None = Query(None),
-    month: int | None = Query(None),
-    day: int | None = Query(None),
+    year: str | None = Query(None),
+    month: str | None = Query(None),
+    day: str | None = Query(None),
     limit: int = Query(300),
 ):
     """
     📥 이력 엑셀 다운로드
     - 입고 / 출고 / 이동 / 롤백 전체 포함
+    - 메인 이력 / 엑셀 센터 공용
     """
 
+    year_i = _to_int(year)
+    month_i = _to_int(month)
+    day_i = _to_int(day)
+
     rows = query_history(
-        year=year,
-        month=month,
-        day=day,
+        year=year_i,
+        month=month_i,
+        day=day_i,
         limit=limit,
     )
 
