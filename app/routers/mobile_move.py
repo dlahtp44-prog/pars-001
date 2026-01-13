@@ -61,24 +61,67 @@ def move_select(
 
 # -------------------------------------------------
 # 4️⃣ 재고 선택 확정 → 도착 로케이션 스캔
-#    ✅ qty 문자열로 받아 서버에서 안전 파싱
+#    🔥 하위 호환 처리 핵심 구간
 # -------------------------------------------------
 @router.post("/select/submit")
 def move_select_submit(
     from_location: str = Form(...),
-    inventory_id: int = Form(...),
-    qty_raw: str = Form(...),          # ⬅️ 핵심 변경
+
+    # 🔹 신규 방식
+    inventory_id: int | None = Form(None),
+    qty_raw: str | None = Form(None),
+
+    # 🔹 구버전(캐시/옛 HTML) 대응
+    pick: str | None = Form(None),
+    qty: float | None = Form(None),
+
     operator: str = Form(...),
     note: str = Form(""),
 ):
-    # 수량 파싱 (콤마/소수점 대응)
-    try:
-        qty = float(qty_raw.replace(",", "."))
-    except Exception:
-        raise HTTPException(status_code=400, detail="이동 수량 형식 오류")
+    """
+    - 신규: inventory_id + qty_raw
+    - 구버전: pick + qty
+    둘 중 무엇이 와도 처리
+    """
+
+    # -----------------------------
+    # inventory_id 결정
+    # -----------------------------
+    if inventory_id is None:
+        if not pick:
+            raise HTTPException(status_code=400, detail="제품 선택 누락")
+
+        # 🔧 구버전 pick 포맷:
+        # warehouse|||brand|||item_code|||item_name|||lot|||spec
+        # → 여기서는 item_code 기준으로 재고를 찾는다고 가정
+        try:
+            parts = pick.split("|||")
+            item_code = parts[2]
+        except Exception:
+            raise HTTPException(status_code=400, detail="제품 선택 형식 오류")
+
+        # 🔍 현재 로케이션에서 item_code로 inventory 조회
+        rows = query_inventory_by_location(from_location)
+        matched = next((r for r in rows if r.item_code == item_code), None)
+
+        if not matched:
+            raise HTTPException(status_code=404, detail="선택한 재고를 찾을 수 없습니다")
+
+        inventory_id = matched.id
+
+    # -----------------------------
+    # qty 결정
+    # -----------------------------
+    if qty is None:
+        if not qty_raw:
+            raise HTTPException(status_code=400, detail="이동 수량 누락")
+        try:
+            qty = float(qty_raw.replace(",", "."))
+        except Exception:
+            raise HTTPException(status_code=400, detail="이동 수량 형식 오류")
 
     if qty <= 0:
-        raise HTTPException(status_code=400, detail="이동 수량은 0보다 커야 합니다.")
+        raise HTTPException(status_code=400, detail="이동 수량은 0보다 커야 합니다")
 
     return RedirectResponse(
         url=(
