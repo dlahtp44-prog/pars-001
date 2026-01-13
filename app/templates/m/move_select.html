@@ -53,9 +53,15 @@
           <p class="small">선택 재고: <b id="availQty">-</b></p>
 
           <label>이동 수량</label>
-          <input name="qty" id="qtyInput" type="number" min="1" step="1"
-                 inputmode="numeric" pattern="[0-9]*"
-                 placeholder="숫자만 입력" required>
+          <input
+            name="qty"
+            id="qtyInput"
+            type="text"
+            inputmode="decimal"
+            pattern="[0-9]*[.,]?[0-9]*"
+            placeholder="예: 12.5"
+            required
+          >
 
           <label>작업자</label>
           <input name="operator" type="text" placeholder="예: 홍길동" required>
@@ -79,23 +85,27 @@
 
         document.querySelectorAll("input[name='pick']").forEach(r=>{
           r.addEventListener("change", ()=>{
-            available = parseInt(r.dataset.qty || "0", 10);
+            available = parseFloat(r.dataset.qty || "0");
             avail.textContent = available;
-            qtyInput.max = available || "";
-            if(available > 0 && parseInt(qtyInput.value||"0",10) > available){
-              qtyInput.value = available;
-            }
           });
         });
 
         form.addEventListener("submit", (e)=>{
-          const q = parseInt(qtyInput.value||"0",10);
+          const q = parseFloat(qtyInput.value.replace(",", ".") || "0");
+
           if(!available){
             alert("제품을 선택하세요.");
             e.preventDefault();
             return;
           }
-          if(q <= 0 || q > available){
+
+          if(isNaN(q) || q <= 0){
+            alert("이동 수량을 올바르게 입력하세요.");
+            e.preventDefault();
+            return;
+          }
+
+          if(q > available){
             alert("수량이 재고를 초과했습니다.");
             e.preventDefault();
           }
