@@ -55,14 +55,31 @@ def extract_item_fields(text: str):
 
 
 # =====================================================
-# 로케이션 QR → location 값만 추출
+# ✅ 로케이션 QR → location 값만 추출 (🔥 핵심 수정)
 # =====================================================
 def extract_location_only(text: str) -> str:
     """
-    예:
-    type=LOC&warehouse=MAIN&location=D01-01
-    → D01-01
+    지원 QR 포맷 (모두 정상 처리):
+
+    1) LOCATION:A01-05-02
+    2) location=A01-05-02
+    3) type=LOC&warehouse=MAIN&location=D01-01
+    4) A01-05-02 (순수 값)
+
+    → 결과: A01-05-02
     """
-    if "location=" in text:
-        return text.split("location=")[-1].strip()
-    return text.strip()
+    if not text:
+        return ""
+
+    t = text.strip()
+
+    # LOCATION:A01-05-02
+    if t.upper().startswith("LOCATION:"):
+        return t.split(":", 1)[1].strip()
+
+    # type=LOC&warehouse=MAIN&location=D01-01
+    if "location=" in t:
+        return t.split("location=", 1)[1].strip()
+
+    # 그냥 순수 로케이션 값
+    return t
