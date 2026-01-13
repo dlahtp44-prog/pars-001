@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>도착 로케이션 스캔</title>
+
+  <!-- QR 스캔 라이브러리 -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>도착 로케이션 스캔</h2>
+
+    <p class="small">
+      출발: <b>{{ from_location }}</b><br>
+      이동 수량: <b>{{ qty }}</b>
+    </p>
+
+    <!-- QR 스캐너 영역 -->
+    <div id="reader" style="width:100%;"></div>
+
+    <!-- 이동 확정 폼 -->
+    <form
+      method="post"
+      action="/m/move/to/submit"
+      id="moveToForm"
+      style="margin-top:12px;"
+    >
+      <!-- 유지해야 할 값들 -->
+      <input type="hidden" name="from_location" value="{{ from_location }}">
+      <input type="hidden" name="inventory_id" value="{{ inventory_id }}">
+      <input type="hidden" name="qty" value="{{ qty }}">
+      <input type="hidden" name="operator" value="{{ operator }}">
+      <input type="hidden" name="note" value="{{ note }}">
+      <input type="hidden" name="to_location" id="toLocation">
+
+      <p class="small">
+        도착 로케이션: <b id="toLocText">미선택</b>
+      </p>
+
+      <button type="submit" disabled id="submitBtn">
+        이동 확정
+      </button>
+    </form>
+
+    <p class="small" style="margin-top:8px;">
+      <a href="/m/move/from">← 이동 다시 시작</a>
+    </p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const toInput = document.getElementById("toLocation");
+  const toText  = document.getElementById("toLocText");
+  const submit  = document.getElementById("submitBtn");
+
+  function onScanSuccess(decodedText) {
+    // QR 값 예: LOCATION:A01-05-02
+    let loc = decodedText;
+
+    if (decodedText.startsWith("LOCATION:")) {
+      loc = decodedText.replace("LOCATION:", "");
+    }
+
+    toInput.value = loc;
+    toText.textContent = loc;
+    submit.disabled = false;
+
+    html5QrcodeScanner.clear();
+  }
+
+  const html5QrcodeScanner = new Html5Qrcode("reader");
+
+  html5QrcodeScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanSuccess,
+    function(error) {
+      // 스캔 중 에러는 무시
+    }
+  );
+})();
+</script>
+
+</body>
+</html>
