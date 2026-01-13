@@ -560,6 +560,26 @@ def add_history(
         conn.commit()
     finally:
         conn.close()
+def history_exists_by_token(token: str) -> bool:
+    """
+    이동/입고/출고 등 중복 실행 방지용
+    동일 token 이력이 이미 있으면 True
+    """
+    if not token:
+        return False
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT 1 FROM history WHERE token = ? LIMIT 1",
+        (token,)
+    )
+
+    row = cur.fetchone()
+    conn.close()
+
+    return row is not None
 
 # =====================================================
 # ROLLBACK
