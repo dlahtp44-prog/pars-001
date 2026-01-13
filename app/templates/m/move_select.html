@@ -10,7 +10,7 @@
 <div class="container">
   <div class="card">
     <h2>제품 선택</h2>
-    <p class="small">출발 로케이션: <b>{{from_location}}</b></p>
+    <p class="small">출발 로케이션: <b>{{ from_location }}</b></p>
 
     {% if rows|length == 0 %}
       <p>해당 로케이션에 재고가 없습니다.</p>
@@ -18,7 +18,8 @@
     {% else %}
 
       <form method="post" action="/m/move/select/submit" id="moveForm">
-        <input type="hidden" name="from_location" value="{{from_location}}">
+        <!-- ✅ 서버 필수 -->
+        <input type="hidden" name="from_location" value="{{ from_location }}">
 
         <table>
           <thead>
@@ -33,18 +34,23 @@
           </thead>
           <tbody>
             {% for r in rows %}
-              <tr>
-                <td>
-                  <input type="radio" name="pick" required
-                         data-qty="{{r.qty}}"
-                         value="{{r.warehouse}}|||{{r.brand}}|||{{r.item_code}}|||{{r.item_name}}|||{{r.lot}}|||{{r.spec}}">
-                </td>
-                <td>{{r.brand}}</td>
-                <td>{{r.item_code}}</td>
-                <td>{{r.lot}}</td>
-                <td>{{r.spec}}</td>
-                <td style="text-align:right">{{r.qty}}</td>
-              </tr>
+            <tr>
+              <td>
+                <!-- ✅ 핵심 수정: inventory_id 전송 -->
+                <input
+                  type="radio"
+                  name="inventory_id"
+                  required
+                  data-qty="{{ r.qty }}"
+                  value="{{ r.id }}"
+                >
+              </td>
+              <td>{{ r.brand }}</td>
+              <td>{{ r.item_code }}</td>
+              <td>{{ r.lot }}</td>
+              <td>{{ r.spec }}</td>
+              <td style="text-align:right">{{ r.qty }}</td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
@@ -77,20 +83,18 @@
 
       <script>
       (function(){
-        const form = document.getElementById("moveForm");
         const avail = document.getElementById("availQty");
         const qtyInput = document.getElementById("qtyInput");
-
         let available = 0;
 
-        document.querySelectorAll("input[name='pick']").forEach(r=>{
+        document.querySelectorAll("input[name='inventory_id']").forEach(r=>{
           r.addEventListener("change", ()=>{
             available = parseFloat(r.dataset.qty || "0");
             avail.textContent = available;
           });
         });
 
-        form.addEventListener("submit", (e)=>{
+        document.getElementById("moveForm").addEventListener("submit", (e)=>{
           const q = parseFloat(qtyInput.value.replace(",", ".") || "0");
 
           if(!available){
