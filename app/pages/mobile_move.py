@@ -1,11 +1,15 @@
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.paths import TEMPLATES_DIR
-from app.db import query_inventory, upsert_inventory, add_history
+from app.db import (
+    query_inventory,
+    upsert_inventory,
+    add_history,
+)
 from app.utils.qr_format import extract_location_only
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -80,11 +84,22 @@ def select_item(request: Request, from_location: str):
     )
 
 
+# =====================================================
+# 2-1️⃣ 제품 선택 확정
+#   🔥 신/구 방식 동시 지원 핵심
+# =====================================================
 @router.post("/select/submit")
 def select_submit(
     from_location: str = Form(...),
-    pick: str = Form(...),
-    qty: int = Form(...),
+
+    # ✅ 신규 방식
+    inventory_id: int | None = Form(None),
+    qty_raw: str | None = Form(None),
+
+    # ✅ 구버전 방식
+    pick: str | None = Form(None),
+    qty: int | None = Form(None),
+
     operator: str = Form(""),
     note: str = Form(""),
 ):
@@ -92,10 +107,16 @@ def select_submit(
     operator = (operator or "").strip()
     note = (note or "").strip()
 
-    try:
-        qty = int(qty)
-    except Exception:
-        qty = 0
+    # -------------------------
+    # 수량 결정
+    # -------------------------
+    if qty is None:
+        if not qty_raw:
+            raise HTTPException(status_code=400, detail="이동 수량 누락")
+        try:
+            qty = int(float(qty_raw.replace(",", ".")))
+        except Exception:
+            raise HTTPException(status_code=400, detail="이동 수량 형식 오류")
 
     if qty <= 0:
         return RedirectResponse(
@@ -103,28 +124,50 @@ def select_submit(
             status_code=303,
         )
 
-    # pick 포맷:
-    # warehouse|||brand|||item_code|||item_name|||lot|||spec
-    parts = (pick or "").split("|||")
-    if len(parts) != 6:
-        return RedirectResponse(
-            url=f"/m/move/select?from_location={from_location}",
-            status_code=303,
+    # -------------------------
+    # inventory 식별
+    # -------------------------
+    if inventory_id is not None:
+        # 🔹 신규 방식: inventory_id 기준
+        rows = query_inventory(id=inventory_id)
+        if not rows:
+            raise HTTPException(status_code=404, detail="재고를 찾을 수 없습니다")
+
+        r = rows[0]
+        warehouse = r["warehouse"]
+        brand = r["brand"]
+        item_code = r["item_code"]
+        item_name = r["item_name"]
+        lot = r["lot"]
+        spec = r["spec"]
+
+    else:
+        # 🔹 구버전 방식: pick 파싱
+        if not pick:
+            raise HTTPException(status_code=400, detail="제품 선택 누락")
+
+        parts = pick.split("|||")
+        if len(parts) != 6:
+            return RedirectResponse(
+                url=f"/m/move/select?from_location={from_location}",
+                status_code=303,
+            )
+
+        warehouse, brand, item_code, item_name, lot, spec = [
+            p.strip() for p in parts
+        ]
+
+        rows = query_inventory(
+            warehouse=warehouse,
+            location=from_location,
+            brand=brand,
+            item_code=item_code,
+            lot=lot,
+            spec=spec,
         )
 
-    warehouse, brand, item_code, item_name, lot, spec = [
-        p.strip() for p in parts
-    ]
-
-    # 재고 확인
-    rows = query_inventory(
-        warehouse=warehouse,
-        location=from_location,
-        brand=brand,
-        item_code=item_code,
-        lot=lot,
-        spec=spec,
-    )
+        if not rows:
+            raise HTTPException(status_code=404, detail="재고를 찾을 수 없습니다")
 
     available = int(rows[0].get("qty", 0)) if rows else 0
 
@@ -195,6 +238,9 @@ def to_scan(
     )
 
 
+# =====================================================
+# 4️⃣ 이동 확정 (DB 반영)
+# =====================================================
 @router.post("/to/submit", response_class=HTMLResponse)
 def to_submit(
     request: Request,
