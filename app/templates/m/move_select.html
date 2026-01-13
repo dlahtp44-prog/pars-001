@@ -18,7 +18,7 @@
     {% else %}
 
       <form method="post" action="/m/move/select/submit" id="moveForm">
-        <!-- 서버 필수 -->
+        <!-- 🔹 서버 필수 -->
         <input type="hidden" name="from_location" value="{{ from_location }}">
 
         <table>
@@ -36,6 +36,7 @@
             {% for r in rows %}
             <tr>
               <td>
+                <!-- ✅ inventory_id 전송 -->
                 <input
                   type="radio"
                   name="inventory_id"
@@ -55,8 +56,11 @@
         </table>
 
         <div style="margin-top:12px;">
-          <p class="small">선택 재고: <b id="availQty">-</b></p>
+          <p class="small">
+            선택 재고: <b id="availQty">-</b>
+          </p>
 
+          <!-- ✅ 서버가 기대하는 필드명 -->
           <label>이동 수량</label>
           <input
             name="qty_raw"
@@ -65,25 +69,43 @@
             inputmode="decimal"
             pattern="[0-9]*[.,]?[0-9]*"
             placeholder="예: 12.5"
+            autocomplete="off"
             required
           >
 
           <label>작업자</label>
-          <input name="operator" type="text" placeholder="예: 홍길동" required>
+          <input
+            name="operator"
+            type="text"
+            placeholder="예: 홍길동"
+            autocomplete="off"
+            required
+          >
 
           <label>비고</label>
-          <input name="note" type="text" placeholder="선택">
+          <input
+            name="note"
+            type="text"
+            placeholder="선택"
+            autocomplete="off"
+          >
 
-          <button type="submit">다음: 도착 로케이션 스캔</button>
+          <button type="submit">
+            다음: 도착 로케이션 스캔
+          </button>
         </div>
       </form>
 
-      <p class="small"><a href="/m/move/from">← 출발 로케이션 다시</a></p>
+      <p class="small">
+        <a href="/m/move/from">← 출발 로케이션 다시</a>
+      </p>
 
       <script>
       (function(){
         const avail = document.getElementById("availQty");
         const qtyInput = document.getElementById("qtyInput");
+        const form = document.getElementById("moveForm");
+
         let available = 0;
 
         document.querySelectorAll("input[name='inventory_id']").forEach(r=>{
@@ -93,7 +115,7 @@
           });
         });
 
-        document.getElementById("moveForm").addEventListener("submit", (e)=>{
+        form.addEventListener("submit", (e)=>{
           const q = parseFloat(qtyInput.value.replace(",", ".") || "0");
 
           if(!available){
