@@ -14,18 +14,13 @@
 
     {% if rows|length == 0 %}
       <p>해당 로케이션에 재고가 없습니다.</p>
-      <div style="margin-top:20px;">
-        <a href="/m/move/from" class="btn-link">뒤로 가기</a>
-      </div>
     {% else %}
     <form method="post" action="/m/move/select/submit">
       <input type="hidden" name="from_location" value="{{ from_location }}">
-
       <table>
         <thead>
           <tr>
             <th>선택</th>
-            <th>브랜드</th>
             <th>품번</th>
             <th>LOT</th>
             <th style="text-align:right">재고</th>
@@ -36,30 +31,26 @@
           <tr>
             <td>
               <input type="radio" name="inventory_id" value="{{ r.id }}" 
-                     onclick="document.getElementsByName('qty_raw')[0].value='{{ r.qty }}'" required>
+                     onclick="document.getElementById('qty_input').value='{{ r.qty }}'" required>
             </td>
-            <td>{{ r.brand }}</td>
             <td>{{ r.item_code }}</td>
             <td>{{ r.lot or '-' }}</td>
-            <td style="text-align:right"><b>{{ r.qty }}</b></td>
+            <td style="text-align:right">{{ r.qty }}</td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
 
-      <div style="margin-top: 20px;">
-        <label>이동 수량 (소수점 가능)</label>
-        <input type="number" name="qty_raw" step="any" inputmode="decimal" placeholder="0.000" required>
+      <label style="margin-top:15px; display:block;">이동 수량 (소수점 가능)</label>
+      <input type="number" id="qty_input" name="qty_raw" step="any" inputmode="decimal" required>
 
-        <label>작업자</label>
-        <input name="operator" placeholder="성명을 입력하세요">
+      <label>작업자</label>
+      <input name="operator">
 
-        <label>비고</label>
-        <input name="note" placeholder="이동 사유 등">
-      </div>
+      <label>비고</label>
+      <input name="note">
 
-      <button type="submit" style="width:100%; height:50px; margin-top:10px;">다음 (도착지 스캔)</button>
-      <a href="/m/move/from" style="display:block; text-align:center; margin-top:15px; color:#666;">취소</a>
+      <button type="submit" style="width:100%; margin-top:10px;">다음 (도착지 스캔)</button>
     </form>
     {% endif %}
   </div>
