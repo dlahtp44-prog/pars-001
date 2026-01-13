@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -61,15 +61,25 @@ def move_select(
 
 # -------------------------------------------------
 # 4️⃣ 재고 선택 확정 → 도착 로케이션 스캔
+#    ✅ qty 문자열로 받아 서버에서 안전 파싱
 # -------------------------------------------------
 @router.post("/select/submit")
 def move_select_submit(
     from_location: str = Form(...),
     inventory_id: int = Form(...),
-    qty: float = Form(...),
+    qty_raw: str = Form(...),          # ⬅️ 핵심 변경
     operator: str = Form(...),
     note: str = Form(""),
 ):
+    # 수량 파싱 (콤마/소수점 대응)
+    try:
+        qty = float(qty_raw.replace(",", "."))
+    except Exception:
+        raise HTTPException(status_code=400, detail="이동 수량 형식 오류")
+
+    if qty <= 0:
+        raise HTTPException(status_code=400, detail="이동 수량은 0보다 커야 합니다.")
+
     return RedirectResponse(
         url=(
             "/m/move/to?"
