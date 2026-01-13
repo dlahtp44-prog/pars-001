@@ -14,7 +14,9 @@
 
     {% if rows|length == 0 %}
       <p>해당 로케이션에 재고가 없습니다.</p>
-      <p class="small"><a href="/m/move/from">← 출발 로케이션 다시</a></p>
+      <div style="margin-top:20px;">
+        <a href="/m/move/from" class="btn-link">← 출발 로케이션 다시 스캔</a>
+      </div>
     {% else %}
     <form method="post" action="/m/move/select/submit" id="moveForm">
       <input type="hidden" name="from_location" value="{{ from_location }}">
@@ -32,11 +34,7 @@
         {% for r in rows %}
           <tr>
             <td>
-              <input type="radio"
-                     name="inventory_id"
-                     value="{{ r.id }}"
-                     data-qty="{{ r.qty }}"
-                     required>
+              <input type="radio" name="inventory_id" value="{{ r.id }}" data-qty="{{ r.qty }}" required>
             </td>
             <td>{{ r.item_code }}</td>
             <td>{{ r.lot or '-' }}</td>
@@ -49,13 +47,8 @@
       <div style="margin-top:12px;">
         <p class="small">선택 재고: <b id="availQty">-</b></p>
 
-        <label>이동 수량 (소수점 가능)</label>
-        <input type="number"
-               id="qty_input"
-               name="qty_raw"
-               step="any"
-               inputmode="decimal"
-               required>
+        <label>이동 수량</label>
+        <input type="number" id="qty_input" name="qty_raw" step="any" inputmode="decimal" required>
 
         <label>작업자</label>
         <input name="operator" required>
@@ -63,13 +56,14 @@
         <label>비고</label>
         <input name="note">
 
-        <button type="submit" id="submitBtn" style="width:100%; margin-top:10px;">
+        <button type="submit" id="submitBtn" style="width:100%; margin-top:15px; padding: 12px;">
           다음 (도착지 스캔)
         </button>
       </div>
     </form>
-
-    <p class="small"><a href="/m/move/from">← 출발 로케이션 다시</a></p>
+    {% endif %}
+    
+    <p class="small" style="margin-top:20px;"><a href="/m/move/from">← 처음으로 돌아가기</a></p>
 
     <script>
       (function(){
@@ -79,39 +73,37 @@
         const submitBtn = document.getElementById("submitBtn");
         let available = 0;
 
+        // 라디오 버튼 선택 시 가용 재고 표시
         document.querySelectorAll("input[name='inventory_id']").forEach(r => {
           r.addEventListener("change", () => {
             available = parseFloat((r.dataset.qty || "0").toString().replace(/,/g, ""));
             availEl.textContent = available.toLocaleString();
+            qtyInput.value = available; // 기본값으로 전량 입력
           });
         });
 
-        form.addEventListener("submit", (e) => {
-          const q = parseFloat((qtyInput.value || "0").toString().replace(/,/g, ""));
-          
-          if (available <= 0) {
-            alert("제품을 선택하세요.");
-            e.preventDefault();
-            return;
-          }
-          if (isNaN(q) || q <= 0) {
-            alert("이동 수량을 올바르게 입력하세요.");
-            e.preventDefault();
-            return;
-          }
-          if (q > available) {
-            alert("수량이 재고를 초과했습니다.");
-            e.preventDefault();
-            return;
-          }
+        if(form) {
+          form.addEventListener("submit", (e) => {
+            const q = parseFloat((qtyInput.value || "0").toString().replace(/,/g, ""));
+            
+            if (available <= 0) {
+              alert("이동할 제품을 선택해주세요.");
+              e.preventDefault();
+              return;
+            }
+            if (isNaN(q) || q <= 0 || q > available) {
+              alert("이동 수량이 올바르지 않거나 재고를 초과했습니다.");
+              e.preventDefault();
+              return;
+            }
 
-          // 중복 클릭 방지
-          submitBtn.disabled = true;
-          submitBtn.innerText = "처리 중...";
-        });
+            // 중복 클릭 방지
+            submitBtn.disabled = true;
+            submitBtn.innerText = "처리 중...";
+          });
+        }
       })();
     </script>
-    {% endif %}
   </div>
 </div>
 </body>
