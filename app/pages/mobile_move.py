@@ -12,17 +12,12 @@ from app.utils.qr_format import extract_location_only
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 router = APIRouter(prefix="/m/move", tags=["mobile-move"])
 
-
 # =====================================================
 # 시작
 # =====================================================
 @router.get("", response_class=HTMLResponse)
 def start(request: Request):
-    return templates.TemplateResponse(
-        "m/move_start.html",
-        {"request": request},
-    )
-
+    return templates.TemplateResponse("m/move_start.html", {"request": request})
 
 # =====================================================
 # 1️⃣ 출발 로케이션 스캔
@@ -40,16 +35,13 @@ def from_scan(request: Request):
         },
     )
 
-
 @router.post("/from/submit")
 def from_submit(qrtext: str = Form(...)):
     from_location = extract_location_only(qrtext)
-
     return RedirectResponse(
         url=f"/m/move/select?from_location={from_location}",
         status_code=303,
     )
-
 
 # =====================================================
 # 2️⃣ 제품 선택
@@ -57,9 +49,8 @@ def from_submit(qrtext: str = Form(...)):
 @router.get("/select", response_class=HTMLResponse)
 def select_item(request: Request, from_location: str):
     rows = query_inventory(location=from_location)
-
-    # 수량 있는 재고만
-    rows = [r for r in rows if int(r.get("qty", 0)) > 0]
+    # 수량이 0보다 큰 재고만 표시 (소수점 재고 고려 float 처리)
+    rows = [r for r in rows if float(r.get("qty", 0)) > 0]
 
     return templates.TemplateResponse(
         "m/move_select.html",
@@ -70,9 +61,8 @@ def select_item(request: Request, from_location: str):
         },
     )
 
-
 # =====================================================
-# 2-1️⃣ 선택 확정 → 도착 로케이션
+# 2-1️⃣ 선택 확정 → 도착 로케이션 화면으로 파라미터 전달
 # =====================================================
 @router.post("/select/submit")
 def select_submit(
@@ -82,11 +72,11 @@ def select_submit(
     operator: str = Form(""),
     note: str = Form(""),
 ):
-    # 수량 파싱
+    # [수정] 소수점 수량 처리를 위해 float으로 파싱
     try:
-        qty = int(float(qty_raw.replace(",", ".")))
+        qty = float(qty_raw.replace(",", ""))
     except Exception:
-        raise HTTPException(400, "수량 형식 오류")
+        raise HTTPException(400, "수량 형식 오류 (숫자만 입력 가능)")
 
     if qty <= 0:
         raise HTTPException(400, "수량은 0보다 커야 합니다")
@@ -97,9 +87,10 @@ def select_submit(
     if not row:
         raise HTTPException(404, "재고를 찾을 수 없습니다")
 
-    if qty > int(row["qty"]):
-        raise HTTPException(400, "수량이 재고를 초과했습니다")
+    if qty > float(row["qty"]):
+        raise HTTPException(400, f"수량이 재고({row['qty']})를 초과했습니다")
 
+    # [수정] 데이터 일관성을 위해 빈 값은 ""으로 통일하여 URL 생성
     params = {
         "warehouse": row["warehouse"],
         "from_location": from_location,
@@ -118,9 +109,8 @@ def select_submit(
         status_code=303,
     )
 
-
 # =====================================================
-# 3️⃣ 도착 로케이션 스캔
+# 3️⃣ 도착 로케이션 스캔 (422 오류 방지를 위해 Query 매개변수 명시)
 # =====================================================
 @router.get("/to", response_class=HTMLResponse)
 def to_scan(
@@ -130,7 +120,7 @@ def to_scan(
     brand: str,
     item_code: str,
     item_name: str,
-    qty: int,
+    qty: float,  # [수정] 수량 타입 float
     lot: Optional[str] = Query(""),
     spec: Optional[str] = Query(""),
     operator: Optional[str] = Query(""),
@@ -160,9 +150,8 @@ def to_scan(
         },
     )
 
-
 # =====================================================
-# 4️⃣ 이동 확정
+# 4️⃣ 이동 확정 (DB 반영)
 # =====================================================
 @router.post("/to/submit", response_class=HTMLResponse)
 def to_submit(
@@ -173,7 +162,7 @@ def to_submit(
     brand: str = Form(...),
     item_code: str = Form(...),
     item_name: str = Form(...),
-    qty: int = Form(...),
+    qty: float = Form(...),  # [수정] 수량 타입 float
     lot: str = Form(""),
     spec: str = Form(""),
     operator: str = Form(""),
@@ -182,36 +171,40 @@ def to_submit(
     to_location = extract_location_only(qrtext)
 
     if from_location == to_location:
-        raise HTTPException(400, "출발지와 도착지가 같습니다")
+        raise HTTPException(400, "출발지와 도착지가 동일합니다")
 
-    lot = lot or None
-    spec = spec or None
+    # [수정] DB 조회 및 업데이트 시 공백 처리를 동일하게 적용
+    # upsert_inventory 내부 로직에 따라 "" 또는 None 중 하나로 통일 필요 (여기선 "" 사용)
+    clean_lot = lot.strip() if lot else ""
+    clean_spec = spec.strip() if spec else ""
 
-    # 출발지 -qty
+    # A. 출발지 -qty
     upsert_inventory(
         warehouse=warehouse,
         location=from_location,
         brand=brand,
         item_code=item_code,
         item_name=item_name,
-        lot=lot,
-        spec=spec,
+        lot=clean_lot,
+        spec=clean_spec,
         qty_delta=-qty,
+        note=f"{to_location}으로 이동"
     )
 
-    # 도착지 +qty
+    # B. 도착지 +qty
     upsert_inventory(
         warehouse=warehouse,
         location=to_location,
         brand=brand,
         item_code=item_code,
         item_name=item_name,
-        lot=lot,
-        spec=spec,
+        lot=clean_lot,
+        spec=clean_spec,
         qty_delta=qty,
+        note=f"{from_location}에서 이동"
     )
 
-    # 이력
+    # C. 이동 이력 저장
     add_history(
         type="이동",
         warehouse=warehouse,
@@ -219,8 +212,8 @@ def to_submit(
         brand=brand,
         item_code=item_code,
         item_name=item_name,
-        lot=lot,
-        spec=spec,
+        lot=clean_lot,
+        spec=clean_spec,
         from_location=from_location,
         to_location=to_location,
         qty=qty,
@@ -231,7 +224,7 @@ def to_submit(
         "m/move_done.html",
         {
             "request": request,
-            "msg": "재고 이동이 완료되었습니다.",
+            "msg": f"[{to_location}]으로 이동이 완료되었습니다.",
             "to_location": to_location,
         },
     )
