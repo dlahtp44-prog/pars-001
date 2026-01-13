@@ -18,7 +18,10 @@ router = APIRouter(prefix="/m/move", tags=["mobile-move"])
 # =====================================================
 @router.get("", response_class=HTMLResponse)
 def start(request: Request):
-    return templates.TemplateResponse("m/move_start.html", {"request": request})
+    return templates.TemplateResponse(
+        "m/move_start.html",
+        {"request": request},
+    )
 
 
 # =====================================================
@@ -41,6 +44,7 @@ def from_scan(request: Request):
 @router.post("/from/submit")
 def from_submit(qrtext: str = Form(...)):
     from_location = extract_location_only(qrtext)
+
     return RedirectResponse(
         url=f"/m/move/select?from_location={from_location}",
         status_code=303,
@@ -53,7 +57,8 @@ def from_submit(qrtext: str = Form(...)):
 @router.get("/select", response_class=HTMLResponse)
 def select_item(request: Request, from_location: str):
     rows = query_inventory(location=from_location)
-    # 수량이 있는 품목만 표시
+
+    # 수량 있는 재고만
     rows = [r for r in rows if int(r.get("qty", 0)) > 0]
 
     return templates.TemplateResponse(
@@ -67,7 +72,7 @@ def select_item(request: Request, from_location: str):
 
 
 # =====================================================
-# 2-1️⃣ 선택 확정 (이동 정보 정리 및 전송)
+# 2-1️⃣ 선택 확정 → 도착 로케이션
 # =====================================================
 @router.post("/select/submit")
 def select_submit(
@@ -81,30 +86,28 @@ def select_submit(
     try:
         qty = int(float(qty_raw.replace(",", ".")))
     except Exception:
-        raise HTTPException(status_code=400, detail="수량 형식 오류")
+        raise HTTPException(400, "수량 형식 오류")
 
     if qty <= 0:
-        raise HTTPException(status_code=400, detail="수량은 0보다 커야 합니다")
+        raise HTTPException(400, "수량은 0보다 커야 합니다")
 
-    # 해당 로케이션의 재고 재확인
     rows = query_inventory(location=from_location)
-    row = next((r for r in rows if r.get("id") == inventory_id), None)
+    row = next((r for r in rows if r["id"] == inventory_id), None)
 
     if not row:
-        raise HTTPException(status_code=404, detail="재고를 찾을 수 없습니다")
+        raise HTTPException(404, "재고를 찾을 수 없습니다")
 
     if qty > int(row["qty"]):
-        raise HTTPException(status_code=400, detail="수량이 재고를 초과했습니다")
+        raise HTTPException(400, "수량이 재고를 초과했습니다")
 
-    # 다음 단계(도착지 스캔)로 넘길 파라미터 구성
     params = {
         "warehouse": row["warehouse"],
         "from_location": from_location,
         "brand": row["brand"],
         "item_code": row["item_code"],
         "item_name": row["item_name"],
-        "lot": row.get("lot", ""),
-        "spec": row.get("spec", ""),
+        "lot": row.get("lot") or "",
+        "spec": row.get("spec") or "",
         "qty": qty,
         "operator": operator,
         "note": note,
@@ -133,18 +136,17 @@ def to_scan(
     operator: Optional[str] = Query(""),
     note: Optional[str] = Query(""),
 ):
-    # 템플릿의 hidden input으로 넘겨줄 파라미터들
-    params = {
+    hidden = {
         "warehouse": warehouse,
         "from_location": from_location,
         "brand": brand,
         "item_code": item_code,
         "item_name": item_name,
-        "lot": lot,
-        "spec": spec,
+        "lot": lot or "",
+        "spec": spec or "",
         "qty": qty,
-        "operator": operator,
-        "note": note,
+        "operator": operator or "",
+        "note": note or "",
     }
 
     return templates.TemplateResponse(
@@ -152,15 +154,15 @@ def to_scan(
         {
             "request": request,
             "title": "도착 로케이션 스캔",
-            "desc": f"[{item_name}] {qty}개 이동 - 도착 로케이션을 스캔하세요.",
+            "desc": f"[{item_name}] {qty} 이동",
             "action": "/m/move/to/submit",
-            "hidden": params,
+            "hidden": hidden,
         },
     )
 
 
 # =====================================================
-# 4️⃣ 이동 확정 (DB 반영)
+# 4️⃣ 이동 확정
 # =====================================================
 @router.post("/to/submit", response_class=HTMLResponse)
 def to_submit(
@@ -180,9 +182,12 @@ def to_submit(
     to_location = extract_location_only(qrtext)
 
     if from_location == to_location:
-        raise HTTPException(status_code=400, detail="출발지와 도착지가 같습니다.")
+        raise HTTPException(400, "출발지와 도착지가 같습니다")
 
-    # 1. 출발지 재고 차감 (-qty)
+    lot = lot or None
+    spec = spec or None
+
+    # 출발지 -qty
     upsert_inventory(
         warehouse=warehouse,
         location=from_location,
@@ -194,7 +199,7 @@ def to_submit(
         qty_delta=-qty,
     )
 
-    # 2. 도착지 재고 가산 (+qty)
+    # 도착지 +qty
     upsert_inventory(
         warehouse=warehouse,
         location=to_location,
@@ -206,7 +211,7 @@ def to_submit(
         qty_delta=qty,
     )
 
-    # 3. 히스토리 기록
+    # 이력
     add_history(
         type="이동",
         warehouse=warehouse,
