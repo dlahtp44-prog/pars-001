@@ -15,7 +15,6 @@
     {% if rows|length == 0 %}
       <p>해당 로케이션에 재고가 없습니다.</p>
     {% else %}
-
     <form method="post" action="/m/move/select/submit">
       <input type="hidden" name="from_location" value="{{ from_location }}">
 
@@ -32,44 +31,37 @@
         {% for r in rows %}
           <tr>
             <td>
-              <input
-                type="radio"
-                name="inventory_id"
-                value="{{ r.id }}"
-                required
-              >
+              <input type="radio"
+                     name="inventory_id"
+                     value="{{ r.id }}"
+                     data-max="{{ r.qty }}"
+                     required>
             </td>
             <td>{{ r.item_code }}</td>
-            <td>{{ r.lot or "-" }}</td>
+            <td>{{ r.lot or '-' }}</td>
             <td style="text-align:right">{{ r.qty }}</td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
 
-      <label style="margin-top:14px; display:block;">
-        이동 수량 (소수점 가능)
-      </label>
-      <input
-        type="number"
-        name="qty_raw"
-        step="any"
-        inputmode="decimal"
-        placeholder="예: 112.5"
-        required
-      >
+      <label>이동 수량</label>
+      <input type="number"
+             name="qty_raw"
+             step="any"
+             inputmode="decimal"
+             required>
 
       <label>작업자</label>
-      <input name="operator" placeholder="예: 이모세">
+      <input name="operator" required>
 
       <label>비고</label>
       <input name="note">
 
-      <button type="submit" style="width:100%; margin-top:12px;">
-        다음 (도착 로케이션 스캔)
+      <button type="submit" style="width:100%;margin-top:10px;">
+        다음 (도착지 스캔)
       </button>
     </form>
-
     {% endif %}
   </div>
 </div>
