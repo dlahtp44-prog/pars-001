@@ -929,83 +929,82 @@ def query_inventory_as_of(
     keyword: str | None = None,
 ):
     """
-    기준일 재고 = 기준일까지 입고 - 출고 (history 기준)
+    기준일(as_of_date) 기준 재고 현황
+    - history 테이블 기준
+    - 기준일 23:59:59 까지의 입/출고 누계
     """
+
     conn = get_db()
     try:
         cur = conn.cursor()
 
-        where = ["created_at <= ?"]
-        params = [as_of_date + " 23:59:59"]
+        where = []
+        params = []
+
+        # 기준일 끝시간
+        where.append("h.created_at <= ?")
+        params.append(f"{as_of_date} 23:59:59")
 
         if keyword:
             kw = f"%{keyword}%"
             where.append("""
                 (
-                    warehouse LIKE ?
-                    OR brand LIKE ?
-                    OR item_code LIKE ?
-                    OR item_name LIKE ?
-                    OR lot LIKE ?
-                    OR spec LIKE ?
-                    OR from_location LIKE ?
-                    OR to_location LIKE ?
+                    h.warehouse LIKE ?
+                    OR h.location LIKE ?
+                    OR h.brand LIKE ?
+                    OR h.item_code LIKE ?
+                    OR h.item_name LIKE ?
+                    OR h.lot LIKE ?
+                    OR h.spec LIKE ?
                 )
             """)
-            params.extend([kw] * 8)
+            params.extend([kw] * 7)
 
         where_sql = " AND ".join(where)
 
         sql = f"""
         SELECT
-            warehouse,
+            h.warehouse,
+            h.location,
+            h.brand,
+            h.item_code,
+            h.item_name,
+            h.lot,
+            h.spec,
 
-            -- 로케이션 결정
-            CASE
-                WHEN type = '입고' THEN to_location
-                WHEN type = '출고' THEN from_location
-                ELSE ''
-            END AS location,
+            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END) AS inbound_qty,
+            SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS outbound_qty,
+            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END)
+          - SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS current_qty
 
-            brand,
-            item_code,
-            item_name,
-            lot,
-            spec,
-
-            SUM(CASE WHEN type = '입고' THEN qty ELSE 0 END) AS inbound_qty,
-            SUM(CASE WHEN type = '출고' THEN qty ELSE 0 END) AS outbound_qty,
-            SUM(
-                CASE
-                    WHEN type = '입고' THEN qty
-                    WHEN type = '출고' THEN -qty
-                    ELSE 0
-                END
-            ) AS current_qty
-
-        FROM history
+        FROM history h
         WHERE {where_sql}
+
         GROUP BY
-            warehouse,
-            location,
-            brand,
-            item_code,
-            item_name,
-            lot,
-            spec
+            h.warehouse,
+            h.location,
+            h.brand,
+            h.item_code,
+            h.item_name,
+            h.lot,
+            h.spec
 
         HAVING current_qty != 0
+
         ORDER BY
-            warehouse,
-            location,
-            item_code
+            h.warehouse,
+            h.location,
+            h.item_code
         """
 
         cur.execute(sql, params)
-        return [dict(r) for r in cur.fetchall()]
+        rows = cur.fetchall()
+
+        return [dict(r) for r in rows]
 
     finally:
         conn.close()
+
 
 
 
