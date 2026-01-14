@@ -922,6 +922,70 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
+def query_inventory_as_of(
+    as_of_date: str,
+    keyword: str = ""
+):
+    """
+    특정 날짜(as_of_date) 기준 재고 현황
+    as_of_date: 'YYYY-MM-DD'
+    """
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    sql = """
+    SELECT
+        warehouse,
+        location,
+        brand,
+        item_code,
+        item_name,
+        lot,
+        spec,
+
+        SUM(CASE WHEN type = 'IN'  THEN qty ELSE 0 END)  AS inbound_qty,
+        SUM(CASE WHEN type = 'OUT' THEN qty ELSE 0 END) AS outbound_qty,
+        SUM(
+            CASE
+                WHEN type = 'IN'  THEN qty
+                WHEN type = 'OUT' THEN -qty
+                ELSE 0
+            END
+        ) AS current_qty
+
+    FROM history
+    WHERE date(created_at) <= date(?)
+    """
+
+    params = [as_of_date]
+
+    if keyword:
+        sql += """
+        AND (
+            location LIKE ?
+            OR item_code LIKE ?
+            OR item_name LIKE ?
+            OR brand LIKE ?
+            OR lot LIKE ?
+        )
+        """
+        kw = f"%{keyword}%"
+        params.extend([kw, kw, kw, kw, kw])
+
+    sql += """
+    GROUP BY
+        warehouse, location, brand,
+        item_code, item_name, lot, spec
+    HAVING current_qty != 0
+    ORDER BY warehouse, location
+    """
+
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+    conn.close()
+
+    return rows
 
 # app/db.py 맨 아래에 추가
 
