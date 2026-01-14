@@ -4,7 +4,9 @@ from fastapi.templating import Jinja2Templates
 from app.db import query_outbound_summary
 
 router = APIRouter(prefix="/page/outbound-summary", tags=["출고통계"])
-templates = Jinja2Templates(directory="templates")
+
+# ✅ 여기 핵심 수정
+templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("")
