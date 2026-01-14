@@ -5,6 +5,9 @@
     <title>출고 통계</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -23,6 +26,9 @@
         .actions {
             margin-bottom: 20px;
         }
+        .chart-box {
+            margin-bottom: 24px;
+        }
         table {
             border-collapse: collapse;
             width: 100%;
@@ -39,7 +45,7 @@
 </head>
 <body>
 
-<h1>출고 통계</h1>
+<h1>출고 통계 ({{ year }}년 {{ month }}월)</h1>
 
 <!-- 조회 필터 -->
 <form class="filter" method="get">
@@ -78,6 +84,12 @@
     </a>
 </div>
 
+<!-- 차트 -->
+<div class="chart-box">
+    <canvas id="outboundChart" height="120"></canvas>
+</div>
+
+<!-- 테이블 -->
 <table>
     <thead>
         <tr>
@@ -100,6 +112,46 @@
         {% endif %}
     </tbody>
 </table>
+
+<script>
+    const labels = [
+        {% for row in rows %}
+            "{{ row.day }}",
+        {% endfor %}
+    ];
+
+    const values = [
+        {% for row in rows %}
+            {{ row.total_qty }},
+        {% endfor %}
+    ];
+
+    const ctx = document.getElementById("outboundChart").getContext("2d");
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "출고 수량",
+                data: values,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
 
 </body>
 </html>
