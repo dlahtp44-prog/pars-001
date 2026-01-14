@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from datetime import date
-from app.db import query_inventory_as_of
 
-router = APIRouter(prefix="/page/inventory-as-of", tags=["재고스냅샷"])
-templates = Jinja2Templates(directory="app/templates")
+from app.db import query_inventory_as_of
+from app.core.paths import TEMPLATES_DIR
+
+router = APIRouter(prefix="/page/inventory-as-of", tags=["재고 스냅샷"])
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.get("")
@@ -13,10 +15,10 @@ def inventory_as_of_page(
     as_of: str | None = None,
     q: str = ""
 ):
-    if as_of is None:
+    if not as_of:
         as_of = date.today().isoformat()
 
-    rows = query_inventory_as_of(as_of, q)
+    rows = query_inventory_as_of(as_of_date=as_of, keyword=q)
 
     return templates.TemplateResponse(
         "inventory_as_of.html",
