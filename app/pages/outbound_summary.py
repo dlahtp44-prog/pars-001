@@ -1,25 +1,25 @@
-from fastapi import APIRouter, Request, Query
-from fastapi.responses import HTMLResponse
+from datetime import datetime
+from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
-from app.core.paths import TEMPLATES_DIR
 from app.db import query_outbound_summary
 
-router = APIRouter(prefix="/page/outbound-summary", tags=["outbound-summary"])
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+router = APIRouter(prefix="/page/outbound-summary", tags=["출고통계"])
+templates = Jinja2Templates(directory="templates")
 
 
-@router.get("", response_class=HTMLResponse)
+@router.get("")
 def outbound_summary_page(
     request: Request,
-    year: int | None = Query(None),
-    month: int | None = Query(None),
+    year: int | None = None,
+    month: int | None = None
 ):
-    """
-    출고 통계 페이지
-    - year 없음 → 연도별
-    - year 있음 → 월별
-    - year + month → 일별
-    """
+    now = datetime.now()
+
+    if year is None:
+        year = now.year
+    if month is None:
+        month = now.month
+
     rows = query_outbound_summary(year=year, month=month)
 
     return templates.TemplateResponse(
@@ -29,5 +29,5 @@ def outbound_summary_page(
             "rows": rows,
             "year": year,
             "month": month,
-        },
+        }
     )
