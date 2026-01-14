@@ -931,7 +931,7 @@ def query_inventory_as_of(
     """
     기준일(as_of_date) 기준 재고 현황
     - history 테이블 기준
-    - 기준일 23:59:59 까지의 입/출고 누계
+    - 기준일 23:59:59 까지의 입고 / 출고 누계
     """
 
     conn = get_db()
@@ -941,13 +941,15 @@ def query_inventory_as_of(
         where = []
         params = []
 
-        # 기준일 끝시간
+        # ✅ 기준일 끝 (해당 날짜까지 누계)
         where.append("h.created_at <= ?")
         params.append(f"{as_of_date} 23:59:59")
 
+        # ✅ 통합 검색
         if keyword:
             kw = f"%{keyword}%"
-            where.append("""
+            where.append(
+                """
                 (
                     h.warehouse LIKE ?
                     OR COALESCE(h.to_location, h.from_location) LIKE ?
@@ -957,7 +959,8 @@ def query_inventory_as_of(
                     OR h.lot LIKE ?
                     OR h.spec LIKE ?
                 )
-            """)
+                """
+            )
             params.extend([kw] * 7)
 
         where_sql = " AND ".join(where)
@@ -972,17 +975,43 @@ def query_inventory_as_of(
             h.lot,
             h.spec,
 
-            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END) AS inbound_qty,
-            SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS outbound_qty,
-            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END)
-          - SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS current_qty
+            -- ✅ 입고 누계
+            SUM(
+                CASE
+                    WHEN h.type = '입고' THEN h.qty
+                    ELSE 0
+                END
+            ) AS inbound_qty,
+
+            -- ✅ 출고 누계
+            SUM(
+                CASE
+                    WHEN h.type = '출고' THEN h.qty
+                    ELSE 0
+                END
+            ) AS outbound_qty,
+
+            -- ✅ 현재고 = 입고 - 출고
+            SUM(
+                CASE
+                    WHEN h.type = '입고' THEN h.qty
+                    ELSE 0
+                END
+            )
+            -
+            SUM(
+                CASE
+                    WHEN h.type = '출고' THEN h.qty
+                    ELSE 0
+                END
+            ) AS current_qty
 
         FROM history h
         WHERE {where_sql}
 
         GROUP BY
             h.warehouse,
-            location,
+            COALESCE(h.to_location, h.from_location),
             h.brand,
             h.item_code,
             h.item_name,
