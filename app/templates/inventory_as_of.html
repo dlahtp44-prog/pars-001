@@ -107,7 +107,25 @@
             placeholder="로케이션 / 품번 / 브랜드 / LOT / 규격"
         >
 
-        <button type="submit">조회</button>
+<button type="submit">조회</button>
+
+<a
+  href="/api/excel/inventory-as-of?as_of={{ as_of }}&q={{ q | urlencode }}"
+  style="
+    margin-left:8px;
+    padding:6px 10px;
+    border:1px solid #2d333b;
+    border-radius:6px;
+    background:#0b1220;
+    color:#e5e7eb;
+    text-decoration:none;
+    font-size:14px;
+  "
+>
+  📥 엑셀 다운로드
+</a>
+
+
     </form>
 
     <table>
