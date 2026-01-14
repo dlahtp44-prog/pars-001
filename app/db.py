@@ -1058,4 +1058,35 @@ def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
             summary["total"] += 1
 
     return {"summary": summary, "rows": out_rows}
+    # =====================================================
+# 출고 통계 (연 / 월 / 일)
+# =====================================================
+def query_outbound_summary(year: int, month: int):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            substr(created_at, 1, 10) AS day,
+            SUM(qty) AS total_qty
+        FROM history
+        WHERE
+            type = 'OUT'
+            AND strftime('%Y', created_at) = ?
+            AND strftime('%m', created_at) = ?
+        GROUP BY day
+        ORDER BY day
+        """,
+        (str(year), f"{month:02d}")
+    )
+
+    rows = cur.fetchall()
+    conn.close()
+
+    return [
+        {"day": row[0], "total_qty": row[1]}
+        for row in rows
+    ]
+
 
