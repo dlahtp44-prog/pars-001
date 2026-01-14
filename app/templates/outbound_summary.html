@@ -1,40 +1,91 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <title>출고 통계</title>
-  <link rel="stylesheet" href="/static/app.css">
+    <meta charset="UTF-8">
+    <title>출고 통계</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            padding: 16px;
+        }
+        h1 {
+            margin-bottom: 12px;
+        }
+        .filter {
+            margin-bottom: 20px;
+        }
+        select, button {
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #f4f4f4;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-  <div class="card">
-    <h2>출고 통계</h2>
 
-    {% if rows|length == 0 %}
-      <p>데이터 없음</p>
-    {% else %}
-      <table>
-        <thead>
-          <tr>
+<h1>출고 통계</h1>
+
+<form class="filter" method="get">
+    <label>
+        연도:
+        <select name="year">
+            {% for y in range(year-5, year+1) %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+                    {{ y }}년
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>
+        월:
+        <select name="month">
+            {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == month %}selected{% endif %}>
+                    {{ m }}월
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <button type="submit">조회</button>
+</form>
+
+<table>
+    <thead>
+        <tr>
             <th>기간</th>
-            <th style="text-align:right">출고 수량</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ r.period }}</td>
-            <td style="text-align:right">{{ r.total_qty }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
+            <th>출고 수량</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if rows %}
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.day }}</td>
+                    <td>{{ row.total_qty }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="2">데이터가 없습니다</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
 
-    <p class="small">
-      <a href="/">← 메인으로</a>
-    </p>
-  </div>
-</div>
 </body>
 </html>
