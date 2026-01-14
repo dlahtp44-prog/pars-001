@@ -91,6 +91,7 @@ app.include_router(api_admin_reset.router)
 app.include_router(api_init_inventory.router)
 app.include_router(init_inventory.router)
 app.include_router(admin_reset.router)
+app.include_router(outbound_summary.router)
 
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
