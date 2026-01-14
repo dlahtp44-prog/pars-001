@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>출고 통계</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h2>출고 통계</h2>
+
+    {% if rows|length == 0 %}
+      <p>데이터 없음</p>
+    {% else %}
+      <table>
+        <thead>
+          <tr>
+            <th>기간</th>
+            <th style="text-align:right">출고 수량</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.period }}</td>
+            <td style="text-align:right">{{ r.total_qty }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    <p class="small">
+      <a href="/">← 메인으로</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>
