@@ -2,92 +2,33 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime
-
-from app.db import (
-    query_outbound_summary,                # ✅ 일자별 출고 (테이블)
-    query_outbound_monthly_and_brand,      # ✅ 월 누적 + 브랜드별
-)
+from app.db import query_inventory_stats  # 위에서 만든 함수
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-
-@router.get("/page/outbound-summary", response_class=HTMLResponse)
-def outbound_summary_page(
-    request: Request,
-    year: int | None = None,
-    month: int | None = None,
-):
-    """
-    출고 통계 페이지
-    - 테이블 : 일자별 출고 합계
-    - 차트 1 : 월별 누적 출고
-    - 차트 2 : 브랜드별 출고
-    """
-
-    # ✅ 기본값: 현재 연 / 월
+@router.get("/page/inventory-summary", response_class=HTMLResponse)
+def inventory_summary_page(request: Request, year: int | None = None, month: int | None = None):
     now = datetime.now()
     year = year or now.year
     month = month or now.month
 
-    # -------------------------------------------------
-    # 1️⃣ 테이블용 : 일자별 출고
-    # -------------------------------------------------
-    rows = query_outbound_summary(
-        year=year,
-        month=month,
-    )
-    # rows 예시:
-    # [
-    #   {"day": "2026-01-14", "total_qty": 10},
-    #   {"day": "2026-01-20", "total_qty": 5},
-    # ]
+    daily_data, brand_data, top_items = query_inventory_stats(year, month)
 
-    # -------------------------------------------------
-    # 2️⃣ 그래프용 : 월 누적 + 브랜드별
-    # -------------------------------------------------
-    cumulative, brands = query_outbound_monthly_and_brand(
-        year=year,
-        month=month,
-    )
-    # cumulative 예시:
-    # [{"day": "2026-01-14", "cumulative_qty": 10}, ...]
-    # brands 예시:
-    # [{"brand": "FLORIM", "total_qty": 15}, ...]
+    # 차트용 데이터 가공
+    labels = [r['day'] for r in daily_data]
+    in_values = [r['in_qty'] for r in daily_data]
+    out_values = [r['out_qty'] for r in daily_data]
 
-    # -------------------------------------------------
-    # 3️⃣ JS 바인딩용 데이터 가공
-    # -------------------------------------------------
-
-    # 🔹 월별 누적 (라인 차트)
-    daily_labels = [r["day"] for r in cumulative]
-    daily_values = [r["cumulative_qty"] for r in cumulative]
-
-    # 🔹 브랜드별 (바 차트)
-    brand_labels = [r["brand"] for r in brands]
-    brand_values = [r["total_qty"] for r in brands]
-
-    # -------------------------------------------------
-    # 4️⃣ 템플릿 렌더링
-    # -------------------------------------------------
-    return templates.TemplateResponse(
-        "outbound_summary.html",
-        {
-            "request": request,
-
-            # 선택값
-            "year": year,
-            "month": month,
-
-            # 📋 테이블
-            "rows": rows,
-
-            # 📈 월별 누적 출고
-            "daily_labels": daily_labels,
-            "daily_values": daily_values,
-
-            # 📊 브랜드별 출고
-            "brand_labels": brand_labels,
-            "brand_values": brand_values,
-        },
-    )
+    return templates.TemplateResponse("outbound_summary.html", {
+        "request": request,
+        "year": year,
+        "month": month,
+        "labels": labels,
+        "in_values": in_values,
+        "out_values": out_values,
+        "brand_labels": [r['brand'] for r in brand_data],
+        "brand_values": [r['total_qty'] for r in brand_data],
+        "top_items": top_items,
+        "rows": daily_data
+    })
