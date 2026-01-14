@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>기준일 재고 현황</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background:#0e1117; color:#e5e7eb; font-family:system-ui; }
+        .box { max-width:1400px; margin:40px auto; background:#161b22; padding:24px; border-radius:12px; }
+        h1 { margin-bottom:16px; }
+        table { width:100%; border-collapse:collapse; margin-top:16px; }
+        th, td { border-bottom:1px solid #2d333b; padding:8px; font-size:14px; }
+        th { background:#0b1220; }
+        input, button { padding:6px 10px; }
+        .num { text-align:right; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>📊 기준일 재고 현황</h1>
+
+    <form method="get">
+        기준일 :
+        <input type="date" name="as_of" value="{{ as_of }}">
+        통합검색 :
+        <input type="text" name="q" value="{{ q }}" placeholder="로케이션 / 품번 / 브랜드 / LOT">
+        <button type="submit">조회</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>창고</th>
+                <th>로케이션</th>
+                <th>브랜드</th>
+                <th>품번</th>
+                <th>품명</th>
+                <th>LOT</th>
+                <th>규격</th>
+                <th>입고 누계</th>
+                <th>출고 누계</th>
+                <th>현재고</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td>{{ r.warehouse }}</td>
+                <td>{{ r.location }}</td>
+                <td>{{ r.brand }}</td>
+                <td>{{ r.item_code }}</td>
+                <td>{{ r.item_name }}</td>
+                <td>{{ r.lot }}</td>
+                <td>{{ r.spec }}</td>
+                <td class="num">{{ "%.3f"|format(r.inbound_qty) }}</td>
+                <td class="num">{{ "%.3f"|format(r.outbound_qty) }}</td>
+                <td class="num"><b>{{ "%.3f"|format(r.current_qty) }}</b></td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="10" style="text-align:center; padding:20px;">
+                    데이터 없음
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
