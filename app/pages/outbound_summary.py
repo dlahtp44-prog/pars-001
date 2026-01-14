@@ -12,17 +12,13 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/page/outbound-summary", response_class=HTMLResponse)
 def outbound_summary_page(
     request: Request,
-    year: int | None = None,
-    month: int | None = None,
+    year: int,
+    month: int,
 ):
-    today = datetime.today()
-    year = year or today.year
-    month = month or today.month
-
-    rows = query_outbound_summary(year=year, month=month)
-
-    labels = [r["day"] for r in rows]
-    values = [r["total_qty"] for r in rows]
+    cumulative, brands = query_outbound_monthly_and_brand(
+        year=year,
+        month=month,
+    )
 
     return templates.TemplateResponse(
         "outbound_summary.html",
@@ -30,8 +26,7 @@ def outbound_summary_page(
             "request": request,
             "year": year,
             "month": month,
-            "rows": rows,
-            "labels": labels,
-            "values": values,
+            "daily": cumulative,
+            "brands": brands,
         },
     )
