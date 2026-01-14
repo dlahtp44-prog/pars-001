@@ -1058,10 +1058,31 @@ def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
             summary["total"] += 1
 
     return {"summary": summary, "rows": out_rows}
-    # =====================================================
+# =====================================================
 # 출고 통계 (연 / 월 / 일)
 # =====================================================
-def query_outbound_summary(year: int, month: int):
+from datetime import datetime
+
+
+def query_outbound_summary(year: int | None = None, month: int | None = None):
+    """
+    출고 통계 (일별 합계)
+    year / month가 None이면 현재 연/월 자동 적용
+    반환 예:
+    [
+        {"day": "2026-01-03", "total_qty": 12},
+        {"day": "2026-01-10", "total_qty": 5},
+    ]
+    """
+
+    # ✅ None 방어 처리 (페이지 직접 접근 대비)
+    now = datetime.now()
+
+    if year is None:
+        year = now.year
+    if month is None:
+        month = now.month
+
     conn = get_db()
     cur = conn.cursor()
 
@@ -1078,7 +1099,7 @@ def query_outbound_summary(year: int, month: int):
         GROUP BY day
         ORDER BY day
         """,
-        (str(year), f"{month:02d}")
+        (str(year), f"{int(month):02d}")
     )
 
     rows = cur.fetchall()
