@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>라벨 출력</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/app.css">
+  <style>
+    body {
+      background: radial-gradient(1200px 600px at 50% -20%, #111827 0%, #020617 60%);
+      color: #e5e7eb;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 36px 20px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #111827;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: linear-gradient(180deg, #020617, #020617) padding-box,
+                  linear-gradient(180deg, #1f2937, #020617) border-box;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      padding: 18px;
+      text-decoration: none;
+      color: #e5e7eb;
+    }
+    .card:hover {
+      border-color: #2563eb;
+    }
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 18px;
+    }
+    .card p {
+      margin: 0;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    .hint {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #93c5fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- 🔝 헤더 -->
+    <div class="header">
+      <h1>🏷️ 라벨 출력</h1>
+
+      <!-- ✅ 메인으로 버튼 -->
+      <a href="/" class="btn">🏠 메인으로</a>
+    </div>
+
+    <!-- 카드 영역 -->
+    <div class="cards">
+      <a class="card" href="/page/labels/product">
+        <h3>📦 제품 라벨</h3>
+        <p>엑셀 업로드 → 미리보기 → 인쇄</p>
+      </a>
+
+      <a class="card" href="/page/labels/location">
+        <h3>📍 로케이션 라벨</h3>
+        <p>단건 입력 / 엑셀 업로드 → QR 출력</p>
+      </a>
+    </div>
+
+    <div class="hint">
+      엑셀 업로드 후 미리보기에서 바로 인쇄할 수 있습니다.
+    </div>
+
+  </div>
+</body>
+</html>

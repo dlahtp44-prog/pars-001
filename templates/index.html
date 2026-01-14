@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>PARS WMS</title>
+
+  <style>
+    /* =========================
+       헤더 + 로그아웃
+    ========================= */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .logout-btn {
+      font-size: 14px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: #111827;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
+    }
+
+    /* =========================
+       기본 레이아웃
+    ========================= */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .menu-grid .card {
+      text-align: center;
+      font-size: 15px;
+      padding: 14px 16px;
+      border-radius: 14px;
+    }
+
+    /* 관리자 영역 구분 */
+    .admin-box {
+      margin-top: 22px;
+      padding-top: 14px;
+      border-top: 2px dashed #374151;
+    }
+
+    .admin-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fca5a5;
+      margin-bottom: 10px;
+    }
+
+    /* =========================
+       📱 모바일 최적화
+    ========================= */
+    @media (max-width: 768px) {
+
+      .header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .header-bar h1 {
+        text-align: center;
+        font-size: 22px;
+      }
+
+      .logout-btn {
+        text-align: center;
+        width: 100%;
+      }
+
+      .menu-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .menu-grid .card {
+        font-size: 17px;
+        padding: 18px 20px;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .menu-grid .highlight {
+        border-width: 2px;
+        font-weight: 600;
+      }
+
+      .small {
+        font-size: 13px;
+        line-height: 1.6;
+        margin-top: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="card">
+
+    <!-- ✅ 헤더 + 로그아웃 -->
+    <div class="header-bar">
+      <h1>PARS WMS v1.6.4-stable</h1>
+      <a href="/logout" class="logout-btn">로그아웃</a>
+    </div>
+
+    <!-- =========================
+         기본 메뉴
+    ========================= -->
+    <div class="menu-grid">
+
+      <a class="card" href="/page/inbound">입고</a>
+      <a class="card" href="/page/outbound">출고</a>
+      <a class="card" href="/page/move">이동</a>
+      <a class="card" href="/page/inventory">재고조회</a>
+      <a class="card" href="/page/history">이력</a>
+      <a class="card" href="/page/outbound-summary">출고 통계</a>
+      <a class="card" href="/page/excel">엑셀 센터</a>
+
+      <a class="card" href="/page/labels">🏷️ 라벨 출력</a>
+
+      <!-- 📅 달력 -->
+      <a class="card highlight" href="/page/calendar">📅 달력</a>
+
+      <!-- 📊 ERP 재고 검증 -->
+      <a class="card highlight" href="/page/erp-verify">📊 ERP 재고 검증</a>
+
+      <a class="card highlight" href="/damage">CS / 파손 등록</a>
+      <a class="card" href="/page/damage-history">CS 이력</a>
+
+      <a class="card" href="/m">모바일</a>
+
+    </div>
+
+    <!-- =========================
+         🛑 관리자 전용 영역
+    ========================= -->
+    <div class="admin-box">
+      <div class="admin-title">⚠️ 관리자 전용</div>
+
+      <div class="menu-grid">
+        <a class="card highlight" href="/page/init-inventory">
+          🧙‍♂️ 초기 재고 세팅
+        </a>
+
+        <a class="card highlight" href="/page/admin-reset">
+          🔥 재고 / 이력 전체 리셋
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

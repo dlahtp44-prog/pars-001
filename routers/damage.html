@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CS / 파손 등록</title>
+</head>
+<body>
+<h2>CS / 파손 등록</h2>
+
+<form method="post" action="/api/damage">
+  발생일 <input type="date" name="occurred_at" required><br><br>
+
+  창고 <input name="warehouse" value="{{ warehouse }}" required><br>
+  로케이션 <input name="location" value="{{ location }}" required><br>
+  브랜드 <input name="brand" value="{{ brand }}"><br>
+
+  품번 <input name="item_code" value="{{ item_code }}" required><br>
+  품명 <input name="item_name" value="{{ item_name }}" required><br>
+  LOT <input name="lot" value="{{ lot }}" required><br>
+  규격 <input name="spec" value="{{ spec }}" required><br>
+  수량 <input type="number" name="qty" required><br><br>
+
+  파손 유형
+  <select name="damage_code_id" id="damage_code_id" required></select><br><br>
+
+  상세 내용<br>
+  <textarea name="detail" rows="4" cols="50"></textarea><br><br>
+
+  <button type="submit">등록</button>
+</form>
+
+<script>
+fetch("/api/damage-codes")
+  .then(r => r.json())
+  .then(d => {
+    const sel = document.getElementById("damage_code_id");
+    d.rows.forEach(x => {
+      const o = document.createElement("option");
+      o.value = x.id;
+      o.text = `${x.category} / ${x.type} / ${x.situation}`;
+      sel.appendChild(o);
+    });
+  });
+</script>
+</body>
+</html>
