@@ -29,9 +29,13 @@
 
         form {
             margin-bottom: 16px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
-        input, button {
+        input, button, .btn {
             padding: 6px 10px;
             font-size: 14px;
             background: #0b1220;
@@ -46,11 +50,17 @@
 
         button {
             cursor: pointer;
-            margin-left: 4px;
         }
 
-        button:hover {
+        button:hover, .btn:hover {
             background: #1f2937;
+        }
+
+        .btn {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         table {
@@ -107,25 +117,23 @@
             placeholder="로케이션 / 품번 / 브랜드 / LOT / 규격"
         >
 
-<button type="submit">조회</button>
+        <button type="submit">조회</button>
 
-<a
-  href="/api/excel/inventory-as-of?as_of={{ as_of }}&q={{ q | urlencode }}"
-  style="
-    margin-left:8px;
-    padding:6px 10px;
-    border:1px solid #2d333b;
-    border-radius:6px;
-    background:#0b1220;
-    color:#e5e7eb;
-    text-decoration:none;
-    font-size:14px;
-  "
->
-  📥 엑셀 다운로드
-</a>
+        <a
+          href="/api/excel/inventory-as-of?as_of={{ as_of }}&q={{ q | urlencode }}"
+          class="btn"
+        >
+          📥 엑셀 다운로드
+        </a>
 
-
+        <!-- ✅ 메인으로 가기 버튼 -->
+        <a
+          href="/"
+          class="btn"
+          style="margin-left:auto;"
+        >
+          ⬅ 메인으로
+        </a>
     </form>
 
     <table>
