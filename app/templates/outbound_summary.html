@@ -14,11 +14,14 @@
             margin-bottom: 12px;
         }
         .filter {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         select, button {
             padding: 6px 10px;
             font-size: 14px;
+        }
+        .actions {
+            margin-bottom: 20px;
         }
         table {
             border-collapse: collapse;
@@ -38,6 +41,7 @@
 
 <h1>출고 통계</h1>
 
+<!-- 조회 필터 -->
 <form class="filter" method="get">
     <label>
         연도:
@@ -63,6 +67,16 @@
 
     <button type="submit">조회</button>
 </form>
+
+<!-- 엑셀 다운로드 -->
+<div class="actions">
+    <a
+        href="/api/excel/outbound-summary?year={{ year }}&month={{ month }}"
+        target="_blank"
+    >
+        <button type="button">엑셀 다운로드</button>
+    </a>
+</div>
 
 <table>
     <thead>
