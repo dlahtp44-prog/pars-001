@@ -44,6 +44,11 @@
             padding: 16px;
             border-radius: 8px;
         }
+        .chart-empty {
+            text-align: center;
+            padding: 40px 0;
+            color: #9ca3af;
+        }
         table {
             border-collapse: collapse;
             width: 100%;
@@ -110,7 +115,7 @@
     </button>
 </div>
 
-<!-- 🔑 서버 데이터 → JS 바인딩 (중요) -->
+<!-- 🔑 서버 데이터 → JS -->
 <script>
     const dailyLabels = {{ daily_labels | tojson }};
     const dailyValues = {{ daily_values | tojson }};
@@ -122,13 +127,23 @@
 <!-- 월별 누적 출고 -->
 <div class="chart-box">
     <h3>📈 월별 누적 출고</h3>
-    <canvas id="dailyChart" height="120"></canvas>
+
+    {% if daily_labels %}
+        <canvas id="dailyChart" height="120"></canvas>
+    {% else %}
+        <div class="chart-empty">출고 데이터가 없습니다</div>
+    {% endif %}
 </div>
 
 <!-- 브랜드별 출고 -->
 <div class="chart-box">
     <h3>🏷 브랜드별 출고</h3>
-    <canvas id="brandChart" height="120"></canvas>
+
+    {% if brand_labels %}
+        <canvas id="brandChart" height="120"></canvas>
+    {% else %}
+        <div class="chart-empty">출고 데이터가 없습니다</div>
+    {% endif %}
 </div>
 
 <!-- 테이블 -->
@@ -157,8 +172,12 @@
 
 <!-- 📊 Chart.js -->
 <script>
+    let dailyChart = null;
+    let brandChart = null;
+
     if (dailyLabels.length > 0) {
-        new Chart(document.getElementById("dailyChart"), {
+        const ctx1 = document.getElementById("dailyChart").getContext("2d");
+        dailyChart = new Chart(ctx1, {
             type: "line",
             data: {
                 labels: dailyLabels,
@@ -173,15 +192,29 @@
             },
             options: {
                 responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
                 }
             }
         });
     }
 
     if (brandLabels.length > 0) {
-        new Chart(document.getElementById("brandChart"), {
+        const ctx2 = document.getElementById("brandChart").getContext("2d");
+        brandChart = new Chart(ctx2, {
             type: "bar",
             data: {
                 labels: brandLabels,
@@ -193,8 +226,21 @@
             },
             options: {
                 responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
                 }
             }
         });
