@@ -12,6 +12,8 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             padding: 16px;
+            background: #0e1117;
+            color: #e5e7eb;
         }
         h1 {
             margin-bottom: 12px;
@@ -23,23 +25,35 @@
             padding: 6px 10px;
             font-size: 14px;
         }
+        button {
+            cursor: pointer;
+        }
         .actions {
             margin-bottom: 20px;
         }
         .chart-box {
             margin-bottom: 24px;
+            background: #161b22;
+            padding: 16px;
+            border-radius: 8px;
         }
         table {
             border-collapse: collapse;
             width: 100%;
+            background: #161b22;
         }
         th, td {
-            border: 1px solid #ccc;
+            border-bottom: 1px solid #2d333b;
             padding: 8px;
             text-align: center;
         }
         th {
-            background: #f4f4f4;
+            background: #0b1220;
+        }
+        .empty {
+            padding: 16px;
+            text-align: center;
+            color: #9ca3af;
         }
     </style>
 </head>
@@ -76,12 +90,11 @@
 
 <!-- 엑셀 다운로드 -->
 <div class="actions">
-    <a
-        href="/api/excel/outbound-summary?year={{ year }}&month={{ month }}"
-        target="_blank"
-    >
-        <button type="button">엑셀 다운로드</button>
-    </a>
+    <button
+        type="button"
+        onclick="location.href='/api/excel/outbound-summary?year={{ year }}&month={{ month }}'">
+        엑셀 다운로드
+    </button>
 </div>
 
 <!-- 차트 -->
@@ -107,50 +120,41 @@
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="2">데이터가 없습니다</td>
+                <td colspan="2" class="empty">데이터가 없습니다</td>
             </tr>
         {% endif %}
     </tbody>
 </table>
 
+<!-- 🔑 데이터 → JS (안전) -->
 <script>
-    const labels = [
-        {% for row in rows %}
-            "{{ row.day }}",
-        {% endfor %}
-    ];
+    const labels = {{ labels | tojson }};
+    const values = {{ values | tojson }};
 
-    const values = [
-        {% for row in rows %}
-            {{ row.total_qty }},
-        {% endfor %}
-    ];
+    if (labels.length > 0) {
+        const ctx = document.getElementById("outboundChart").getContext("2d");
 
-    const ctx = document.getElementById("outboundChart").getContext("2d");
-
-    new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: "출고 수량",
-                data: values,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "출고 수량",
+                    data: values,
+                    backgroundColor: "#3b82f6"
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
                 }
             }
-        }
-    });
+        });
+    }
 </script>
 
 </body>
