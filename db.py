@@ -1044,58 +1044,85 @@ def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
 # =====================================================
 # 출고 통계 (연/월/일)
 # =====================================================
-def query_outbound_summary(year: int | None = None, month: int | None = None):
-    """history 테이블 기준 출고 합계 집계
+def query_outbound_summary(
+    year: int | None = None,
+    month: int | None = None,
+):
+    """
+    history 테이블 기준 출고 합계 집계
 
     - year만 주면: 월별 합계 (1~12)
-    - year+month 주면: 일별 합계 (1~31)
-    반환: list[dict] {period, total_qty}
+    - year + month 주면: 일별 합계 (1~31)
+    - 아무 값도 없으면: 연도별 합계
+
+    반환:
+      list[dict] {
+        period: str,
+        total_qty: float
+      }
     """
+
     conn = get_db()
     cur = conn.cursor()
 
-    if year and month:
-        y = f"{year:04d}"
-        m = f"{month:02d}"
-        cur.execute(
-            """
-            SELECT strftime('%d', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-              AND strftime('%Y', created_at)=?
-              AND strftime('%m', created_at)=?
-            GROUP BY period
-            ORDER BY period
-            """,
-            (y, m),
-        )
-    elif year:
-        y = f"{year:04d}"
-        cur.execute(
-            """
-            SELECT strftime('%m', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-              AND strftime('%Y', created_at)=?
-            GROUP BY period
-            ORDER BY period
-            """,
-            (y,),
-        )
-    else:
-        # 최근 연도별 합계
-        cur.execute(
-            """
-            SELECT strftime('%Y', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-            GROUP BY period
-            ORDER BY period DESC
-            """
-        )
+    try:
+        if year and month:
+            y = f"{year:04d}"
+            m = f"{month:02d}"
+            cur.execute(
+                """
+                SELECT
+                    strftime('%d', created_at) AS period,
+                    SUM(qty) AS total_qty
+                FROM history
+                WHERE type = '출고'
+                  AND strftime('%Y', created_at) = ?
+                  AND strftime('%m', created_at) = ?
+                GROUP BY period
+                ORDER BY CAST(period AS INTEGER)
+                """,
+                (y, m),
+            )
 
-    rows = cur.fetchall()
-    return [{"period": r[0], "total_qty": float(r[1] or 0)} for r in rows]
+        elif year:
+            y = f"{year:04d}"
+            cur.execute(
+                """
+                SELECT
+                    strftime('%m', created_at) AS period,
+                    SUM(qty) AS total_qty
+                FROM history
+                WHERE type = '출고'
+                  AND strftime('%Y', created_at) = ?
+                GROUP BY period
+                ORDER BY CAST(period AS INTEGER)
+                """,
+                (y,),
+            )
+
+        else:
+            # 연도별 출고 합계
+            cur.execute(
+                """
+                SELECT
+                    strftime('%Y', created_at) AS period,
+                    SUM(qty) AS total_qty
+                FROM history
+                WHERE type = '출고'
+                GROUP BY period
+                ORDER BY CAST(period AS INTEGER) DESC
+                """
+            )
+
+        rows = cur.fetchall()
+
+        return [
+            {
+                "period": r[0],
+                "total_qty": float(Decimal(str(r[1] or 0))),
+            }
+            for r in rows
+        ]
+
+    finally:
+        conn.close()
