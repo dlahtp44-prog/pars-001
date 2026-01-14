@@ -15,7 +15,7 @@
             background: #0e1117;
             color: #e5e7eb;
         }
-        h1 {
+        h1, h3 {
             margin-bottom: 12px;
         }
         .filter {
@@ -24,9 +24,16 @@
         select, button {
             padding: 6px 10px;
             font-size: 14px;
+            background: #0b1220;
+            color: #e5e7eb;
+            border: 1px solid #2d333b;
+            border-radius: 6px;
         }
         button {
             cursor: pointer;
+        }
+        button:hover {
+            background: #1f2937;
         }
         .actions {
             margin-bottom: 20px;
@@ -59,7 +66,7 @@
 </head>
 <body>
 
-<h1>출고 통계 ({{ year }}년 {{ month }}월)</h1>
+<h1>📦 출고 통계 ({{ year }}년 {{ month }}월)</h1>
 
 <!-- 조회 필터 -->
 <form class="filter" method="get">
@@ -88,25 +95,47 @@
     <button type="submit">조회</button>
 </form>
 
-<!-- 엑셀 다운로드 -->
+<!-- 액션 -->
 <div class="actions">
     <button
         type="button"
         onclick="location.href='/api/excel/outbound-summary?year={{ year }}&month={{ month }}'">
-        엑셀 다운로드
+        📥 엑셀 다운로드
+    </button>
+    <button
+        type="button"
+        style="margin-left:8px"
+        onclick="location.href='/'">
+        ⬅ 메인으로
     </button>
 </div>
 
-<!-- 차트 -->
+<!-- 🔑 서버 데이터 → JS 바인딩 (중요) -->
+<script>
+    const dailyLabels = {{ daily_labels | tojson }};
+    const dailyValues = {{ daily_values | tojson }};
+
+    const brandLabels = {{ brand_labels | tojson }};
+    const brandValues = {{ brand_values | tojson }};
+</script>
+
+<!-- 월별 누적 출고 -->
 <div class="chart-box">
-    <canvas id="outboundChart" height="120"></canvas>
+    <h3>📈 월별 누적 출고</h3>
+    <canvas id="dailyChart" height="120"></canvas>
+</div>
+
+<!-- 브랜드별 출고 -->
+<div class="chart-box">
+    <h3>🏷 브랜드별 출고</h3>
+    <canvas id="brandChart" height="120"></canvas>
 </div>
 
 <!-- 테이블 -->
 <table>
     <thead>
         <tr>
-            <th>기간</th>
+            <th>일자</th>
             <th>출고 수량</th>
         </tr>
     </thead>
@@ -126,29 +155,44 @@
     </tbody>
 </table>
 
-<!-- 🔑 데이터 → JS (안전) -->
+<!-- 📊 Chart.js -->
 <script>
-    const labels = {{ labels | tojson }};
-    const values = {{ values | tojson }};
+    if (dailyLabels.length > 0) {
+        new Chart(document.getElementById("dailyChart"), {
+            type: "line",
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: "누적 출고",
+                    data: dailyValues,
+                    borderWidth: 2,
+                    borderColor: "#22c55e",
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
 
-    if (labels.length > 0) {
-        const ctx = document.getElementById("outboundChart").getContext("2d");
-
-        new Chart(ctx, {
+    if (brandLabels.length > 0) {
+        new Chart(document.getElementById("brandChart"), {
             type: "bar",
             data: {
-                labels: labels,
+                labels: brandLabels,
                 datasets: [{
-                    label: "출고 수량",
-                    data: values,
+                    label: "브랜드별 출고",
+                    data: brandValues,
                     backgroundColor: "#3b82f6"
                 }]
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
                 scales: {
                     y: { beginAtZero: true }
                 }
