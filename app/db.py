@@ -922,14 +922,14 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
+        
 def query_inventory_as_of(
     *,
     as_of_date: str,
     keyword: str | None = None,
 ):
     """
-    기준일(as_of_date) 기준 재고 현황
-    = 기준일까지 입고 누계 - 출고 누계
+    기준일 재고 = 기준일까지 입고 - 출고 (history 기준)
     """
     conn = get_db()
     try:
@@ -943,22 +943,30 @@ def query_inventory_as_of(
             where.append("""
                 (
                     warehouse LIKE ?
-                    OR location LIKE ?
                     OR brand LIKE ?
                     OR item_code LIKE ?
                     OR item_name LIKE ?
                     OR lot LIKE ?
                     OR spec LIKE ?
+                    OR from_location LIKE ?
+                    OR to_location LIKE ?
                 )
             """)
-            params.extend([kw] * 7)
+            params.extend([kw] * 8)
 
         where_sql = " AND ".join(where)
 
         sql = f"""
         SELECT
             warehouse,
-            location,
+
+            -- 로케이션 결정
+            CASE
+                WHEN type = '입고' THEN to_location
+                WHEN type = '출고' THEN from_location
+                ELSE ''
+            END AS location,
+
             brand,
             item_code,
             item_name,
@@ -967,11 +975,13 @@ def query_inventory_as_of(
 
             SUM(CASE WHEN type = '입고' THEN qty ELSE 0 END) AS inbound_qty,
             SUM(CASE WHEN type = '출고' THEN qty ELSE 0 END) AS outbound_qty,
-            SUM(CASE
-                WHEN type = '입고' THEN qty
-                WHEN type = '출고' THEN -qty
-                ELSE 0
-            END) AS current_qty
+            SUM(
+                CASE
+                    WHEN type = '입고' THEN qty
+                    WHEN type = '출고' THEN -qty
+                    ELSE 0
+                END
+            ) AS current_qty
 
         FROM history
         WHERE {where_sql}
@@ -992,11 +1002,11 @@ def query_inventory_as_of(
         """
 
         cur.execute(sql, params)
-        rows = [dict(r) for r in cur.fetchall()]
-        return rows
+        return [dict(r) for r in cur.fetchall()]
 
     finally:
         conn.close()
+
 
 
 
