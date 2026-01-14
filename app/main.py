@@ -64,6 +64,7 @@ from app.pages.erp_verify import router as erp_verify_page_router
 from app.pages.calendar import router as calendar_page_router
 from app.pages import init_inventory
 from app.pages import admin_reset
+from app.pages.outbound_summary import router as outbound_summary_router
 
 # ✅ 이력 엑셀 (pandas 없는 버전)
 from app.routers.excel_history import router as excel_history_router
@@ -93,6 +94,7 @@ app.include_router(api_init_inventory.router)
 app.include_router(init_inventory.router)
 app.include_router(admin_reset.router)
 app.include_router(api_excel_history.router)
+app.include_router(outbound_summary_router)
 
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
@@ -132,6 +134,7 @@ from app.routers.api_labels import router as api_labels_router
 from app.routers.api_admin import router as api_admin_router
 from app.routers.api_rollback import router as api_rollback_router
 from app.routers.api_erp_verify import router as api_erp_verify_router
+from app.routers.api_excel_outbound_summary import router as api_excel_outbound_summary_router
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -146,3 +149,4 @@ app.include_router(api_labels_router)
 app.include_router(api_admin_router)
 app.include_router(api_rollback_router)
 app.include_router(api_erp_verify_router)
+app.include_router(api_excel_outbound_summary_router)
