@@ -1198,5 +1198,51 @@ def query_outbound_summary(year: int, month: int):
 
     finally:
         conn.close()
+def query_outbound_monthly_and_brand(*, year: int, month: int):
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+
+        ym_params = [str(year), f"{month:02d}"]
+
+        # ① 일자별 출고
+        cur.execute("""
+            SELECT DATE(created_at) AS day, SUM(qty) AS daily_qty
+            FROM history
+            WHERE type='OUT'
+              AND strftime('%Y', created_at)=?
+              AND strftime('%m', created_at)=?
+            GROUP BY DATE(created_at)
+            ORDER BY day
+        """, ym_params)
+        daily = cur.fetchall()
+
+        # 누적 계산
+        cumulative = []
+        total = 0
+        for r in daily:
+            total += r["daily_qty"]
+            cumulative.append({
+                "day": r["day"],
+                "daily_qty": r["daily_qty"],
+                "cumulative_qty": total,
+            })
+
+        # ② 브랜드별 출고
+        cur.execute("""
+            SELECT brand, SUM(qty) AS total_qty
+            FROM history
+            WHERE type='OUT'
+              AND strftime('%Y', created_at)=?
+              AND strftime('%m', created_at)=?
+            GROUP BY brand
+            ORDER BY total_qty DESC
+        """, ym_params)
+        brands = cur.fetchall()
+
+        return cumulative, brands
+
+    finally:
+        conn.close()
 
 
