@@ -1201,55 +1201,71 @@ def query_outbound_summary(year: int, month: int):
 
 
 def query_outbound_monthly_and_brand(*, year: int, month: int):
+    """
+    1️⃣ 월별 누적 출고 (일자 기준)
+    2️⃣ 브랜드별 출고 합계
+    - OUT 만 집계
+    - MOVE 자동 제외
+    """
+
     conn = get_db()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    # ✅ 일별 출고 (월별 누적용)
-    cur.execute(
-        """
-        SELECT
-            DATE(created_at) AS day,
-            SUM(qty) AS daily_qty
-        FROM history
-        WHERE 유형 = '출고'
-          AND strftime('%Y', created_at) = ?
-          AND strftime('%m', created_at) = ?
-        GROUP BY DATE(created_at)
-        ORDER BY day
-        """,
-        (str(year), f"{month:02d}")
-    )
-    daily_rows = cur.fetchall()
+        # =========================
+        # 1️⃣ 월별 누적 출고
+        # =========================
+        cur.execute(
+            """
+            SELECT
+                DATE(created_at) AS day,
+                SUM(qty) AS daily_qty
+            FROM history
+            WHERE type = 'OUT'
+              AND strftime('%Y', created_at) = ?
+              AND strftime('%m', created_at) = ?
+            GROUP BY DATE(created_at)
+            ORDER BY day
+            """,
+            (str(year), f"{month:02d}")
+        )
 
-    # 누적 계산
-    cumulative = []
-    running = 0
-    for r in daily_rows:
-        running += r["daily_qty"]
-        cumulative.append({
-            "day": r["day"],
-            "cumulative_qty": running
-        })
+        rows = cur.fetchall()
 
-    # ✅ 브랜드별 출고
-    cur.execute(
-        """
-        SELECT
-            brand,
-            SUM(qty) AS total_qty
-        FROM history
-        WHERE 유형 = '출고'
-          AND strftime('%Y', created_at) = ?
-          AND strftime('%m', created_at) = ?
-        GROUP BY brand
-        ORDER BY total_qty DESC
-        """,
-        (str(year), f"{month:02d}")
-    )
-    brands = cur.fetchall()
+        cumulative = []
+        running = 0
+        for r in rows:
+            running += r["daily_qty"]
+            cumulative.append({
+                "day": r["day"],
+                "cumulative_qty": running,
+            })
 
-    conn.close()
-    return cumulative, brands
+        # =========================
+        # 2️⃣ 브랜드별 출고
+        # =========================
+        cur.execute(
+            """
+            SELECT
+                brand,
+                SUM(qty) AS total_qty
+            FROM history
+            WHERE type = 'OUT'
+              AND strftime('%Y', created_at) = ?
+              AND strftime('%m', created_at) = ?
+            GROUP BY brand
+            ORDER BY total_qty DESC
+            """,
+            (str(year), f"{month:02d}")
+        )
+
+        brands = [dict(r) for r in cur.fetchall()]
+
+        return cumulative, brands
+
+    finally:
+        conn.close()
+
 
 
 
