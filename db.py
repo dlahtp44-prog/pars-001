@@ -1044,67 +1044,40 @@ def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
 # =====================================================
 # 출고 통계 (연 / 월 / 일)
 # =====================================================
-def query_outbound_summary(year: int | None = None, month: int | None = None):
+def query_outbound_summary(year: int, month: int):
     """
-    history 테이블 기준 출고 합계 집계
-
-    - year만 주면: 월별 합계 (01~12)
-    - year + month: 일별 합계 (01~31)
-    - 둘 다 없으면: 연도별 합계
+    출고 통계 (월 기준)
+    반환 예:
+    [
+        {"day": "2026-01-03", "total_qty": 12},
+        {"day": "2026-01-10", "total_qty": 5},
+    ]
     """
     conn = get_db()
     cur = conn.cursor()
 
-    if year and month:
-        y = f"{year:04d}"
-        m = f"{month:02d}"
-        cur.execute(
-            """
-            SELECT strftime('%d', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-              AND strftime('%Y', created_at)=?
-              AND strftime('%m', created_at)=?
-            GROUP BY period
-            ORDER BY period
-            """,
-            (y, m),
-        )
-
-    elif year:
-        y = f"{year:04d}"
-        cur.execute(
-            """
-            SELECT strftime('%m', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-              AND strftime('%Y', created_at)=?
-            GROUP BY period
-            ORDER BY period
-            """,
-            (y,),
-        )
-
-    else:
-        cur.execute(
-            """
-            SELECT strftime('%Y', created_at) AS period,
-                   SUM(qty) AS total_qty
-            FROM history
-            WHERE type='출고'
-            GROUP BY period
-            ORDER BY period DESC
-            """
-        )
+    cur.execute(
+        """
+        SELECT
+            substr(created_at, 1, 10) AS day,
+            SUM(qty) AS total_qty
+        FROM history
+        WHERE
+            type = 'OUT'
+            AND strftime('%Y', created_at) = ?
+            AND strftime('%m', created_at) = ?
+        GROUP BY day
+        ORDER BY day
+        """,
+        (str(year), f"{month:02d}")
+    )
 
     rows = cur.fetchall()
+    conn.close()
+
     return [
-        {
-            "period": r[0],
-            "total_qty": float(r[1] or 0),
-        }
-        for r in rows
+        {"day": row[0], "total_qty": row[1]}
+        for row in rows
     ]
+
 
