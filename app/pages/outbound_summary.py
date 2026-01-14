@@ -9,27 +9,29 @@ router = APIRouter(prefix="/page/outbound-summary", tags=["출고통계"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("")
+@router.get("/page/outbound-summary", response_class=HTMLResponse)
 def outbound_summary_page(
     request: Request,
     year: int | None = None,
-    month: int | None = None
+    month: int | None = None,
 ):
-    now = datetime.now()
+    today = date.today()
+    year = year or today.year
+    month = month or today.month
 
-    if year is None:
-        year = now.year
-    if month is None:
-        month = now.month
+    rows = query_outbound_summary(year, month)
 
-    rows = query_outbound_summary(year=year, month=month)
+    labels = [r["day"] for r in rows]
+    values = [r["total_qty"] for r in rows]
 
     return templates.TemplateResponse(
         "outbound_summary.html",
         {
             "request": request,
-            "rows": rows,
             "year": year,
             "month": month,
-        }
+            "labels": labels,
+            "values": values,
+            "rows": rows,
+        },
     )
