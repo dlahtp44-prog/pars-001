@@ -923,69 +923,132 @@ def query_history(
     finally:
         conn.close()
 def query_inventory_as_of(
+    *,
     as_of_date: str,
-    keyword: str = ""
+    keyword: str | None = None,
+    limit: int = 1000,
 ):
     """
-    특정 날짜(as_of_date) 기준 재고 현황
-    as_of_date: 'YYYY-MM-DD'
+    기준일 현재고 조회 (입고 / 출고 / 이동 반영)
+
+    반환 컬럼:
+      warehouse
+      location
+      brand
+      item_code
+      item_name
+      lot
+      spec
+      inbound_qty
+      outbound_qty
+      current_qty
     """
 
     conn = get_db()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    sql = """
-    SELECT
-        warehouse,
-        location,
-        brand,
-        item_code,
-        item_name,
-        lot,
-        spec,
+        where = ["created_at <= ?"]
+        params: list = [as_of_date + " 23:59:59"]
 
-        SUM(CASE WHEN type = 'IN'  THEN qty ELSE 0 END)  AS inbound_qty,
-        SUM(CASE WHEN type = 'OUT' THEN qty ELSE 0 END) AS outbound_qty,
-        SUM(
+        if keyword:
+            k = f"%{_norm(keyword)}%"
+            where.append("""
+                (
+                    item_code LIKE ?
+                    OR item_name LIKE ?
+                    OR lot LIKE ?
+                    OR spec LIKE ?
+                    OR brand LIKE ?
+                    OR from_location LIKE ?
+                    OR to_location LIKE ?
+                )
+            """)
+            params.extend([k, k, k, k, k, k, k])
+
+        sql = f"""
+        SELECT
+            warehouse,
+
             CASE
-                WHEN type = 'IN'  THEN qty
-                WHEN type = 'OUT' THEN -qty
-                ELSE 0
-            END
-        ) AS current_qty
+                WHEN type = '입고' THEN to_location
+                WHEN type = '출고' THEN from_location
+                WHEN type = '이동' THEN to_location
+            END AS location,
 
-    FROM history
-    WHERE date(created_at) <= date(?)
-    """
+            brand,
+            item_code,
+            item_name,
+            lot,
+            spec,
 
-    params = [as_of_date]
+            SUM(
+                CASE
+                    WHEN type = '입고' THEN qty
+                    ELSE 0
+                END
+            ) AS inbound_qty,
 
-    if keyword:
-        sql += """
-        AND (
-            location LIKE ?
-            OR item_code LIKE ?
-            OR item_name LIKE ?
-            OR brand LIKE ?
-            OR lot LIKE ?
-        )
+            SUM(
+                CASE
+                    WHEN type = '출고' THEN qty
+                    ELSE 0
+                END
+            ) AS outbound_qty,
+
+            SUM(
+                CASE
+                    WHEN type = '입고' THEN qty
+                    WHEN type = '출고' THEN -qty
+                    WHEN type = '이동' THEN qty
+                    ELSE 0
+                END
+            ) AS current_qty
+
+        FROM history
+        WHERE {" AND ".join(where)}
+        GROUP BY
+            warehouse,
+            location,
+            brand,
+            item_code,
+            item_name,
+            lot,
+            spec
+        HAVING current_qty != 0
+        ORDER BY
+            brand,
+            item_code,
+            location,
+            lot,
+            spec
+        LIMIT ?
         """
-        kw = f"%{keyword}%"
-        params.extend([kw, kw, kw, kw, kw])
 
-    sql += """
-    GROUP BY
-        warehouse, location, brand,
-        item_code, item_name, lot, spec
-    HAVING current_qty != 0
-    ORDER BY warehouse, location
-    """
+        params.append(limit)
 
-    cur.execute(sql, params)
-    rows = cur.fetchall()
-    conn.close()
+        cur.execute(sql, params)
+        rows = cur.fetchall()
 
-    return rows
+        return [
+            {
+                "warehouse": r["warehouse"],
+                "location": r["location"],
+                "brand": r["brand"],
+                "item_code": r["item_code"],
+                "item_name": r["item_name"],
+                "lot": r["lot"],
+                "spec": r["spec"],
+                "inbound_qty": _q3(r["inbound_qty"]),
+                "outbound_qty": _q3(r["outbound_qty"]),
+                "current_qty": _q3(r["current_qty"]),
+            }
+            for r in rows
+        ]
+
+    finally:
+        conn.close()
+
 
 # app/db.py 맨 아래에 추가
 
