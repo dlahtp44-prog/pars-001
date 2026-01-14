@@ -1169,50 +1169,34 @@ def get_inventory_compare_rows(erp_rows: list[dict]) -> dict:
 from datetime import datetime
 
 
-def query_outbound_summary(year: int | None = None, month: int | None = None):
+def query_outbound_summary(year: int, month: int):
     """
-    출고 통계 (일별 합계)
-    year / month가 None이면 현재 연/월 자동 적용
-    반환 예:
-    [
-        {"day": "2026-01-03", "total_qty": 12},
-        {"day": "2026-01-10", "total_qty": 5},
-    ]
+    출고 통계 (월별 / 일자별)
+    - history 테이블 기준
+    - type = 'OUT' 만 집계
+    - MOVE 자동 제외
     """
-
-    # ✅ None 방어 처리 (페이지 직접 접근 대비)
-    now = datetime.now()
-
-    if year is None:
-        year = now.year
-    if month is None:
-        month = now.month
-
     conn = get_db()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    cur.execute(
-        """
+        sql = """
         SELECT
-            substr(created_at, 1, 10) AS day,
-            SUM(qty) AS total_qty
-        FROM history
+            DATE(h.created_at) AS day,
+            SUM(h.qty) AS total_qty
+        FROM history h
         WHERE
-            type = 'OUT'
-            AND strftime('%Y', created_at) = ?
-            AND strftime('%m', created_at) = ?
-        GROUP BY day
+            h.type = 'OUT'
+            AND strftime('%Y', h.created_at) = ?
+            AND strftime('%m', h.created_at) = ?
+        GROUP BY DATE(h.created_at)
         ORDER BY day
-        """,
-        (str(year), f"{int(month):02d}")
-    )
+        """
 
-    rows = cur.fetchall()
-    conn.close()
+        cur.execute(sql, (str(year), f"{month:02d}"))
+        return [dict(r) for r in cur.fetchall()]
 
-    return [
-        {"day": row[0], "total_qty": row[1]}
-        for row in rows
-    ]
+    finally:
+        conn.close()
 
 
