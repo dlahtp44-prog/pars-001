@@ -950,7 +950,7 @@ def query_inventory_as_of(
             where.append("""
                 (
                     h.warehouse LIKE ?
-                    OR h.location LIKE ?
+                    OR COALESCE(h.to_location, h.from_location) LIKE ?
                     OR h.brand LIKE ?
                     OR h.item_code LIKE ?
                     OR h.item_name LIKE ?
@@ -965,7 +965,7 @@ def query_inventory_as_of(
         sql = f"""
         SELECT
             h.warehouse,
-            h.location,
+            COALESCE(h.to_location, h.from_location) AS location,
             h.brand,
             h.item_code,
             h.item_name,
@@ -982,7 +982,7 @@ def query_inventory_as_of(
 
         GROUP BY
             h.warehouse,
-            h.location,
+            location,
             h.brand,
             h.item_code,
             h.item_name,
@@ -993,17 +993,16 @@ def query_inventory_as_of(
 
         ORDER BY
             h.warehouse,
-            h.location,
+            location,
             h.item_code
         """
 
         cur.execute(sql, params)
-        rows = cur.fetchall()
-
-        return [dict(r) for r in rows]
+        return [dict(r) for r in cur.fetchall()]
 
     finally:
         conn.close()
+
 
 
 
