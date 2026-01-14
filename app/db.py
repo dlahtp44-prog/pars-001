@@ -926,87 +926,55 @@ def query_inventory_as_of(
     *,
     as_of_date: str,
     keyword: str | None = None,
-    limit: int = 1000,
 ):
     """
-    기준일 현재고 조회 (입고 / 출고 / 이동 반영)
-
-    반환 컬럼:
-      warehouse
-      location
-      brand
-      item_code
-      item_name
-      lot
-      spec
-      inbound_qty
-      outbound_qty
-      current_qty
+    기준일(as_of_date) 기준 재고 현황
+    = 기준일까지 입고 누계 - 출고 누계
     """
-
     conn = get_db()
     try:
         cur = conn.cursor()
 
         where = ["created_at <= ?"]
-        params: list = [as_of_date + " 23:59:59"]
+        params = [as_of_date + " 23:59:59"]
 
         if keyword:
-            k = f"%{_norm(keyword)}%"
+            kw = f"%{keyword}%"
             where.append("""
                 (
-                    item_code LIKE ?
+                    warehouse LIKE ?
+                    OR location LIKE ?
+                    OR brand LIKE ?
+                    OR item_code LIKE ?
                     OR item_name LIKE ?
                     OR lot LIKE ?
                     OR spec LIKE ?
-                    OR brand LIKE ?
-                    OR from_location LIKE ?
-                    OR to_location LIKE ?
                 )
             """)
-            params.extend([k, k, k, k, k, k, k])
+            params.extend([kw] * 7)
+
+        where_sql = " AND ".join(where)
 
         sql = f"""
         SELECT
             warehouse,
-
-            CASE
-                WHEN type = '입고' THEN to_location
-                WHEN type = '출고' THEN from_location
-                WHEN type = '이동' THEN to_location
-            END AS location,
-
+            location,
             brand,
             item_code,
             item_name,
             lot,
             spec,
 
-            SUM(
-                CASE
-                    WHEN type = '입고' THEN qty
-                    ELSE 0
-                END
-            ) AS inbound_qty,
-
-            SUM(
-                CASE
-                    WHEN type = '출고' THEN qty
-                    ELSE 0
-                END
-            ) AS outbound_qty,
-
-            SUM(
-                CASE
-                    WHEN type = '입고' THEN qty
-                    WHEN type = '출고' THEN -qty
-                    WHEN type = '이동' THEN qty
-                    ELSE 0
-                END
-            ) AS current_qty
+            SUM(CASE WHEN type = '입고' THEN qty ELSE 0 END) AS inbound_qty,
+            SUM(CASE WHEN type = '출고' THEN qty ELSE 0 END) AS outbound_qty,
+            SUM(CASE
+                WHEN type = '입고' THEN qty
+                WHEN type = '출고' THEN -qty
+                ELSE 0
+            END) AS current_qty
 
         FROM history
-        WHERE {" AND ".join(where)}
+        WHERE {where_sql}
         GROUP BY
             warehouse,
             location,
@@ -1015,39 +983,21 @@ def query_inventory_as_of(
             item_name,
             lot,
             spec
+
         HAVING current_qty != 0
         ORDER BY
-            brand,
-            item_code,
+            warehouse,
             location,
-            lot,
-            spec
-        LIMIT ?
+            item_code
         """
 
-        params.append(limit)
-
         cur.execute(sql, params)
-        rows = cur.fetchall()
-
-        return [
-            {
-                "warehouse": r["warehouse"],
-                "location": r["location"],
-                "brand": r["brand"],
-                "item_code": r["item_code"],
-                "item_name": r["item_name"],
-                "lot": r["lot"],
-                "spec": r["spec"],
-                "inbound_qty": _q3(r["inbound_qty"]),
-                "outbound_qty": _q3(r["outbound_qty"]),
-                "current_qty": _q3(r["current_qty"]),
-            }
-            for r in rows
-        ]
+        rows = [dict(r) for r in cur.fetchall()]
+        return rows
 
     finally:
         conn.close()
+
 
 
 # app/db.py 맨 아래에 추가
