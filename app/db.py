@@ -922,115 +922,138 @@ def query_history(
         return cur.fetchall()
     finally:
         conn.close()
+
+
+
         
-def query_inventory_as_of(
-    *,
-    as_of_date: str,
-    keyword: str | None = None,
-):
+def query_inventory_as_of(*, as_of_date: str, keyword: str | None = None):
     """
-    기준일(as_of_date) 기준 재고 현황
-    - history 테이블 기준
-    - 기준일 23:59:59 까지의 입고 / 출고 누계
+    기준일 재고 (이동 포함 정확 계산)
+    - 기준일 다음날 00:00 미만
+    - 이동은 from / to 분리
     """
 
     conn = get_db()
     try:
         cur = conn.cursor()
 
-        where = []
+        cutoff = f"{as_of_date} 00:00:00"
+        cutoff_next = f"{as_of_date} 23:59:59"
+
         params = []
+        where = []
 
-        # ✅ 기준일 끝 (해당 날짜까지 누계)
-        where.append("h.created_at <= ?")
-        params.append(f"{as_of_date} 23:59:59")
+        # ✅ 날짜 조건 (다음날 00:00 미만 방식 권장)
+        where.append("h.created_at < datetime(?, '+1 day')")
+        params.append(as_of_date)
 
-        # ✅ 통합 검색
         if keyword:
             kw = f"%{keyword}%"
-            where.append(
-                """
+            where.append("""
                 (
                     h.warehouse LIKE ?
-                    OR COALESCE(h.to_location, h.from_location) LIKE ?
+                    OR h.from_location LIKE ?
+                    OR h.to_location LIKE ?
                     OR h.brand LIKE ?
                     OR h.item_code LIKE ?
                     OR h.item_name LIKE ?
                     OR h.lot LIKE ?
                     OR h.spec LIKE ?
                 )
-                """
-            )
-            params.extend([kw] * 7)
+            """)
+            params.extend([kw] * 8)
 
         where_sql = " AND ".join(where)
 
         sql = f"""
+        WITH movements AS (
+            -- 입고
+            SELECT
+                h.warehouse,
+                h.to_location AS location,
+                h.brand,
+                h.item_code,
+                h.item_name,
+                h.lot,
+                h.spec,
+                h.qty AS qty
+            FROM history h
+            WHERE h.type = 'IN' AND {where_sql}
+
+            UNION ALL
+
+            -- 출고
+            SELECT
+                h.warehouse,
+                h.from_location AS location,
+                h.brand,
+                h.item_code,
+                h.item_name,
+                h.lot,
+                h.spec,
+                -h.qty AS qty
+            FROM history h
+            WHERE h.type = 'OUT' AND {where_sql}
+
+            UNION ALL
+
+            -- 이동 (출발지 -)
+            SELECT
+                h.warehouse,
+                h.from_location AS location,
+                h.brand,
+                h.item_code,
+                h.item_name,
+                h.lot,
+                h.spec,
+                -h.qty AS qty
+            FROM history h
+            WHERE h.type = 'MOVE' AND {where_sql}
+
+            UNION ALL
+
+            -- 이동 (도착지 +)
+            SELECT
+                h.warehouse,
+                h.to_location AS location,
+                h.brand,
+                h.item_code,
+                h.item_name,
+                h.lot,
+                h.spec,
+                h.qty AS qty
+            FROM history h
+            WHERE h.type = 'MOVE' AND {where_sql}
+        )
+
         SELECT
-            h.warehouse,
-            COALESCE(h.to_location, h.from_location) AS location,
-            h.brand,
-            h.item_code,
-            h.item_name,
-            h.lot,
-            h.spec,
-
-            -- ✅ 입고 누계
-            SUM(
-                CASE
-                    WHEN h.type = '입고' THEN h.qty
-                    ELSE 0
-                END
-            ) AS inbound_qty,
-
-            -- ✅ 출고 누계
-            SUM(
-                CASE
-                    WHEN h.type = '출고' THEN h.qty
-                    ELSE 0
-                END
-            ) AS outbound_qty,
-
-            -- ✅ 현재고 = 입고 - 출고
-            SUM(
-                CASE
-                    WHEN h.type = '입고' THEN h.qty
-                    ELSE 0
-                END
-            )
-            -
-            SUM(
-                CASE
-                    WHEN h.type = '출고' THEN h.qty
-                    ELSE 0
-                END
-            ) AS current_qty
-
-        FROM history h
-        WHERE {where_sql}
-
-        GROUP BY
-            h.warehouse,
-            COALESCE(h.to_location, h.from_location),
-            h.brand,
-            h.item_code,
-            h.item_name,
-            h.lot,
-            h.spec
-
-        HAVING current_qty != 0
-
-        ORDER BY
-            h.warehouse,
+            warehouse,
             location,
-            h.item_code
+            brand,
+            item_code,
+            item_name,
+            lot,
+            spec,
+            SUM(qty) AS current_qty
+        FROM movements
+        GROUP BY
+            warehouse,
+            location,
+            brand,
+            item_code,
+            item_name,
+            lot,
+            spec
+        HAVING current_qty != 0
+        ORDER BY warehouse, location, item_code
         """
 
-        cur.execute(sql, params)
+        cur.execute(sql, params * 4)  # UNION ALL 4번
         return [dict(r) for r in cur.fetchall()]
 
     finally:
         conn.close()
+
 
 
 
