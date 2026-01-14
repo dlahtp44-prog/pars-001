@@ -933,87 +933,94 @@ def query_inventory_as_of(
 ):
     """
     기준일(as_of_date) 기준 재고 현황
-    - history 기준
-    - 기준일 23:59:59 까지 반영
-    - 로케이션별 정확한 재고 계산
+    - history 테이블의 입고, 출고, 이동 데이터를 모두 반영
+    - 이동 데이터는 출발지(-)와 도착지(+)로 분리하여 계산
     """
 
     conn = get_db()
     try:
         cur = conn.cursor()
 
-        where = []
-        params = []
+        # 검색 필터 조건 설정
+        where_clause = "WHERE datetime(created_at) <= datetime(?)"
+        params = [f"{as_of_date} 23:59:59"]
 
-        # ✅ 기준일 끝시간 (날짜 오차 방지)
-        where.append("datetime(h.created_at) <= datetime(?)")
-        params.append(f"{as_of_date} 23:59:59")
-
+        keyword_filter = ""
         if keyword:
             kw = f"%{keyword}%"
-            where.append("""
-                (
-                    h.warehouse LIKE ?
-                    OR h.from_location LIKE ?
-                    OR h.to_location LIKE ?
-                    OR h.brand LIKE ?
-                    OR h.item_code LIKE ?
-                    OR h.item_name LIKE ?
-                    OR h.lot LIKE ?
-                    OR h.spec LIKE ?
+            keyword_filter = """
+                AND (
+                    warehouse LIKE ? OR from_location LIKE ? OR to_location LIKE ? 
+                    OR brand LIKE ? OR item_code LIKE ? OR item_name LIKE ? 
+                    OR lot LIKE ? OR spec LIKE ?
                 )
-            """)
+            """
             params.extend([kw] * 8)
 
-        where_sql = " AND ".join(where)
-
+        # ✅ 핵심 로직: UNION ALL을 통해 입고/출고/이동을 표준화된 형태로 통합
         sql = f"""
+        WITH expanded_history AS (
+            -- 1. 입고 데이터 (IN)
+            SELECT 
+                warehouse, to_location AS location, brand, item_code, item_name, lot, spec,
+                qty AS inbound_qty, 0 AS outbound_qty
+            FROM history 
+            {where_clause} AND type IN ('입고', 'IN') {keyword_filter}
+
+            UNION ALL
+
+            -- 2. 출고 데이터 (OUT)
+            SELECT 
+                warehouse, from_location AS location, brand, item_code, item_name, lot, spec,
+                0 AS inbound_qty, qty AS outbound_qty
+            FROM history 
+            {where_clause} AND type IN ('출고', 'OUT') {keyword_filter}
+
+            UNION ALL
+
+            -- 3. 이동 데이터 - 출발지 (재고 감소)
+            SELECT 
+                warehouse, from_location AS location, brand, item_code, item_name, lot, spec,
+                0 AS inbound_qty, qty AS outbound_qty
+            FROM history 
+            {where_clause} AND type IN ('이동', 'MOVE') {keyword_filter}
+
+            UNION ALL
+
+            -- 4. 이동 데이터 - 도착지 (재고 증가)
+            SELECT 
+                warehouse, to_location AS location, brand, item_code, item_name, lot, spec,
+                qty AS inbound_qty, 0 AS outbound_qty
+            FROM history 
+            {where_clause} AND type IN ('이동', 'MOVE') {keyword_filter}
+        )
         SELECT
-            h.warehouse,
-
-            -- ✅ 로케이션 분리 (핵심)
-            CASE
-                WHEN h.type = 'IN'  THEN h.to_location
-                WHEN h.type = 'OUT' THEN h.from_location
-            END AS location,
-
-            h.brand,
-            h.item_code,
-            h.item_name,
-            h.lot,
-            h.spec,
-
-            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END) AS inbound_qty,
-            SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS outbound_qty,
-            SUM(CASE WHEN h.type = 'IN'  THEN h.qty ELSE 0 END)
-          - SUM(CASE WHEN h.type = 'OUT' THEN h.qty ELSE 0 END) AS current_qty
-
-        FROM history h
-        WHERE {where_sql}
-
-        GROUP BY
-            h.warehouse,
+            warehouse,
             location,
-            h.brand,
-            h.item_code,
-            h.item_name,
-            h.lot,
-            h.spec
-
+            brand,
+            item_code,
+            item_name,
+            lot,
+            spec,
+            SUM(inbound_qty) AS inbound_qty,   -- 입고 누계
+            SUM(outbound_qty) AS outbound_qty, -- 출고 누계
+            SUM(inbound_qty) - SUM(outbound_qty) AS current_qty -- 현재고
+        FROM expanded_history
+        GROUP BY 
+            warehouse, location, brand, item_code, item_name, lot, spec
         HAVING current_qty != 0
-
-        ORDER BY
-            h.warehouse,
-            location,
-            h.item_code
+        ORDER BY 
+            warehouse, location, item_code
         """
 
-        cur.execute(sql, params)
+        # params가 4개의 SELECT문에 반복해서 들어가므로 4배로 확장
+        all_params = params * 4
+        cur.execute(sql, all_params)
+        
         return [dict(r) for r in cur.fetchall()]
 
     finally:
         conn.close()
-
 
 
 
