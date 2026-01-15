@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>출고 통계</title>
+    <title>입·출고 통계</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Chart.js -->
@@ -38,6 +38,30 @@
         .actions {
             margin-bottom: 20px;
         }
+        .summary {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            flex: 1;
+            background: #161b22;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .summary-box h4 {
+            margin-bottom: 8px;
+            font-weight: normal;
+            color: #9ca3af;
+        }
+        .summary-box p {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .in { color: #22c55e; }
+        .out { color: #ef4444; }
+
         .chart-box {
             margin-bottom: 24px;
             background: #161b22;
@@ -71,7 +95,7 @@
 </head>
 <body>
 
-<h1>📦 출고 통계 ({{ year }}년 {{ month }}월)</h1>
+<h1>📊 입·출고 통계 ({{ year }}년 {{ month }}월)</h1>
 
 <!-- 조회 필터 -->
 <form class="filter" method="get">
@@ -102,36 +126,41 @@
 
 <!-- 액션 -->
 <div class="actions">
-    <button
-        type="button"
-        onclick="location.href='/api/excel/outbound-summary?year={{ year }}&month={{ month }}'">
-        📥 엑셀 다운로드
-    </button>
-    <button
-        type="button"
-        style="margin-left:8px"
-        onclick="location.href='/'">
+    <button type="button" onclick="location.href='/'">
         ⬅ 메인으로
     </button>
+</div>
+
+<!-- 월 누적 요약 -->
+<div class="summary">
+    <div class="summary-box">
+        <h4>월 누적 입고</h4>
+        <p class="in">{{ monthly_in_total }}</p>
+    </div>
+    <div class="summary-box">
+        <h4>월 누적 출고</h4>
+        <p class="out">{{ monthly_out_total }}</p>
+    </div>
 </div>
 
 <!-- 🔑 서버 데이터 → JS -->
 <script>
     const dailyLabels = {{ daily_labels | tojson }};
-    const dailyValues = {{ daily_values | tojson }};
+    const dailyIn = {{ daily_in | tojson }};
+    const dailyOut = {{ daily_out | tojson }};
 
     const brandLabels = {{ brand_labels | tojson }};
     const brandValues = {{ brand_values | tojson }};
 </script>
 
-<!-- 월별 누적 출고 -->
+<!-- 입·출고 추이 -->
 <div class="chart-box">
-    <h3>📈 월별 누적 출고</h3>
+    <h3>📈 일자별 입·출고</h3>
 
     {% if daily_labels %}
         <canvas id="dailyChart" height="120"></canvas>
     {% else %}
-        <div class="chart-empty">출고 데이터가 없습니다</div>
+        <div class="chart-empty">데이터가 없습니다</div>
     {% endif %}
 </div>
 
@@ -142,11 +171,11 @@
     {% if brand_labels %}
         <canvas id="brandChart" height="120"></canvas>
     {% else %}
-        <div class="chart-empty">출고 데이터가 없습니다</div>
+        <div class="chart-empty">데이터가 없습니다</div>
     {% endif %}
 </div>
 
-<!-- 테이블 -->
+<!-- 출고 테이블 -->
 <table>
     <thead>
         <tr>
@@ -172,41 +201,33 @@
 
 <!-- 📊 Chart.js -->
 <script>
-    let dailyChart = null;
-    let brandChart = null;
-
     if (dailyLabels.length > 0) {
         const ctx1 = document.getElementById("dailyChart").getContext("2d");
-        dailyChart = new Chart(ctx1, {
+        new Chart(ctx1, {
             type: "line",
             data: {
                 labels: dailyLabels,
-                datasets: [{
-                    label: "누적 출고",
-                    data: dailyValues,
-                    borderWidth: 2,
-                    borderColor: "#22c55e",
-                    tension: 0.3,
-                    fill: false
-                }]
+                datasets: [
+                    {
+                        label: "입고",
+                        data: dailyIn,
+                        borderColor: "#22c55e",
+                        borderWidth: 2,
+                        tension: 0.3
+                    },
+                    {
+                        label: "출고",
+                        data: dailyOut,
+                        borderColor: "#ef4444",
+                        borderWidth: 2,
+                        tension: 0.3
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.parsed.y.toLocaleString()}`
-                        }
-                    }
-                },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
+                    y: { beginAtZero: true }
                 }
             }
         });
@@ -214,7 +235,7 @@
 
     if (brandLabels.length > 0) {
         const ctx2 = document.getElementById("brandChart").getContext("2d");
-        brandChart = new Chart(ctx2, {
+        new Chart(ctx2, {
             type: "bar",
             data: {
                 labels: brandLabels,
@@ -226,21 +247,8 @@
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.parsed.y.toLocaleString()}`
-                        }
-                    }
-                },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
+                    y: { beginAtZero: true }
                 }
             }
         });
