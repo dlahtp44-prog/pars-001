@@ -1274,7 +1274,12 @@ def query_io_stats(start_date: str, end_date: str):
                 END AS io_type,
                 SUM(qty) AS total_qty
             FROM history
-            WHERE created_at BETWEEN ? AND ?
+            WHERE
+                created_at BETWEEN ? AND ?
+                AND type IN (
+                    'IN', 'INBOUND', '입고',
+                    'OUT', 'OUTBOUND', 'CS_OUT', '출고'
+                )
             GROUP BY day, io_type
             ORDER BY day
             """,
@@ -1285,8 +1290,10 @@ def query_io_stats(start_date: str, end_date: str):
         )
 
         return [dict(r) for r in cur.fetchall()]
+
     finally:
         conn.close()
+
 
 
 
