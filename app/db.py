@@ -1179,6 +1179,8 @@ def query_outbound_summary(year: int, month: int):
 
     conn = get_db()
     try:
+        # ✅ dict 반환 보장
+        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
         sql = """
@@ -1187,7 +1189,7 @@ def query_outbound_summary(year: int, month: int):
             SUM(h.qty) AS total_qty
         FROM history h
         WHERE
-            h.type IN ('OUT', 'OUTBOUND', '출고', 'CS_OUT')
+            h.type IN ('OUT', 'OUTBOUND', 'CS_OUT')
             AND strftime('%Y', h.created_at) = ?
             AND strftime('%m', h.created_at) = ?
         GROUP BY DATE(h.created_at)
@@ -1199,6 +1201,7 @@ def query_outbound_summary(year: int, month: int):
 
     finally:
         conn.close()
+
 
 
 
