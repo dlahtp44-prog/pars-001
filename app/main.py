@@ -18,14 +18,17 @@ app = FastAPI(
 def on_startup():
     init_db()
 
-    raw_flag = os.getenv("RESET_DB", "1").strip().lower()
+    env = os.getenv("ENV", "development").strip().lower()
+
+    raw_flag = os.getenv("RESET_DB", "0").strip().lower()
     reset_flag = raw_flag in {"1", "true", "yes", "y", "on"}
 
-    if reset_flag:
-        print(f"⚠ RESET_DB={raw_flag} → inventory/history 초기화 실행")
+    if reset_flag and env != "production":
+        print(f"⚠ RESET_DB={raw_flag} (env={env}) → inventory/history 초기화 실행")
         reset_inventory_and_history()
     else:
-        print(f"ℹ RESET_DB={raw_flag} → 데이터 유지")
+        print(f"ℹ RESET_DB={raw_flag} (env={env}) → 데이터 유지")
+
 
 # =========================
 # SESSION
