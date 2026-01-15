@@ -1296,6 +1296,80 @@ def query_io_stats(start_date: str, end_date: str):
     finally:
         conn.close()
 
+import sqlite3
+
+# =========================
+# [신규] 입·출고 그룹 통계
+# =========================
+def query_io_group_stats(
+    start_date: str,
+    end_date: str,
+    group: str = "brand",   # brand | item | spec
+    keyword: str = "",      # 품번/품명/브랜드 검색
+    brand: str = "",        # 브랜드 필터
+):
+    """
+    입·출고 그룹 통계 (브랜드/품목/규격)
+    - history 기준
+    - IN: ('IN','INBOUND')
+    - OUT: ('OUT','OUTBOUND','CS_OUT')
+    """
+
+    conn = get_db()
+    try:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        # 그룹 컬럼 구성
+        if group == "item":
+            group_cols = "h.brand, h.item_code, h.item_name"
+            select_cols = "h.brand AS brand, h.item_code AS item_code, h.item_name AS item_name"
+            group_by = "h.brand, h.item_code, h.item_name"
+        elif group == "spec":
+            group_cols = "h.brand, h.spec"
+            select_cols = "h.brand AS brand, h.spec AS spec"
+            group_by = "h.brand, h.spec"
+        else:  # brand
+            group_cols = "h.brand"
+            select_cols = "h.brand AS brand"
+            group_by = "h.brand"
+
+        where = []
+        params = []
+
+        where.append("h.created_at BETWEEN ? AND ?")
+        params.append(f"{start_date} 00:00:00")
+        params.append(f"{end_date} 23:59:59")
+
+        where.append("h.type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')")
+
+        if brand:
+            where.append("h.brand = ?")
+            params.append(brand)
+
+        if keyword:
+            kw = f"%{keyword}%"
+            where.append("(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)")
+            params.extend([kw, kw, kw, kw])
+
+        sql = f"""
+        SELECT
+            {select_cols},
+            SUM(CASE WHEN h.type IN ('IN','INBOUND') THEN h.qty ELSE 0 END) AS in_qty,
+            SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','CS_OUT') THEN h.qty ELSE 0 END) AS out_qty,
+            SUM(CASE WHEN h.type IN ('IN','INBOUND') THEN h.qty ELSE 0 END)
+              - SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','CS_OUT') THEN h.qty ELSE 0 END) AS net_qty
+        FROM history h
+        WHERE {" AND ".join(where)}
+        GROUP BY {group_by}
+        ORDER BY out_qty DESC, in_qty DESC
+        """
+
+        cur.execute(sql, params)
+        return [dict(r) for r in cur.fetchall()]
+
+    finally:
+        conn.close()
 
 
 
