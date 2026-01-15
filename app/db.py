@@ -1293,41 +1293,31 @@ def query_io_group_stats(
     start_date: str,
     end_date: str,
     group: str = "brand",   # brand | item | spec
-    keyword: str = "",      # 품번/품명/브랜드 검색
-    brand: str = "",        # 브랜드 필터
+    keyword: str = "",
+    brand: str = "",
 ):
-    """
-    입·출고 그룹 통계 (브랜드/품목/규격)
-    - history 기준
-    - IN: ('IN','INBOUND')
-    - OUT: ('OUT','OUTBOUND','CS_OUT')
-    """
-
     conn = get_db()
     try:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # 그룹 컬럼 구성
+        # 🔑 그룹 컬럼 매핑 (네 DB 기준)
         if group == "item":
-            group_cols = "h.brand, h.item_code, h.item_name"
-            select_cols = "h.brand AS brand, h.item_code AS item_code, h.item_name AS item_name"
-            group_by = "h.brand, h.item_code, h.item_name"
+            select_cols = "h.brand, h.sku AS item_code, h.name AS item_name"
+            group_by = "h.brand, h.sku, h.name"
         elif group == "spec":
-            group_cols = "h.brand, h.spec"
-            select_cols = "h.brand AS brand, h.spec AS spec"
+            select_cols = "h.brand, h.spec"
             group_by = "h.brand, h.spec"
         else:  # brand
-            group_cols = "h.brand"
-            select_cols = "h.brand AS brand"
+            select_cols = "h.brand"
             group_by = "h.brand"
 
         where = []
         params = []
 
-        where.append("h.created_at BETWEEN ? AND ?")
-        params.append(f"{start_date} 00:00:00")
-        params.append(f"{end_date} 23:59:59")
+        # 🔥 날짜는 DATE 기준으로
+        where.append("DATE(h.created_at) BETWEEN DATE(?) AND DATE(?)")
+        params.extend([start_date, end_date])
 
         where.append("h.type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')")
 
@@ -1337,7 +1327,7 @@ def query_io_group_stats(
 
         if keyword:
             kw = f"%{keyword}%"
-            where.append("(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)")
+            where.append("(h.brand LIKE ? OR h.sku LIKE ? OR h.name LIKE ? OR h.spec LIKE ?)")
             params.extend([kw, kw, kw, kw])
 
         sql = f"""
@@ -1358,6 +1348,7 @@ def query_io_group_stats(
 
     finally:
         conn.close()
+
 
 
 
