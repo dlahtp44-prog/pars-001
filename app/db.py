@@ -1260,16 +1260,8 @@ def query_outbound_monthly_and_brand(*, year: int, month: int):
 import sqlite3
 
 def query_io_stats(start_date: str, end_date: str):
-    """
-    입·출고 통계 (실제 history.type 기준)
-    - IN / INBOUND  → IN
-    - OUT / OUTBOUND / CS_OUT → OUT
-    - 한글 type 비교 제거 (인코딩 안정)
-    """
-
     conn = get_db()
     try:
-        # ✅ dict 변환 보장
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
@@ -1283,20 +1275,16 @@ def query_io_stats(start_date: str, end_date: str):
                 SUM(qty) AS total_qty
             FROM history
             WHERE type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')
-              AND created_at BETWEEN ? AND ?
+              AND DATE(created_at) BETWEEN DATE(?) AND DATE(?)
             GROUP BY day, io_type
             ORDER BY day
-        """, (
-            f"{start_date} 00:00:00",
-            f"{end_date} 23:59:59"
-        ))
+        """, (start_date, end_date))
 
         return [dict(r) for r in cur.fetchall()]
 
     finally:
         conn.close()
 
-import sqlite3
 
 # =========================
 # [신규] 입·출고 그룹 통계
