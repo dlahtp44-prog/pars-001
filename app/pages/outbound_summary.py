@@ -89,27 +89,13 @@ def outbound_summary_page(
     # =================================================
     # 4️⃣ 템플릿 렌더링
     # =================================================
-    return templates.TemplateResponse(
-        "outbound_summary.html",
-        {
-            "request": request,
+return templates.TemplateResponse(
+    "outbound_summary.html",
+    {
+        "request": request,
+        "start": start,
+        "end": end,
+        ...
+    },
+)
 
-            # 선택값
-            "year": year,
-            "month": month,
-
-            # 📋 테이블 (출고)
-            "rows": rows,
-
-            # 📈 입·출고 라인 차트
-            "daily_labels": daily_labels,
-            "daily_in": daily_in,
-            "daily_out": daily_out,
-            "monthly_in_total": monthly_in_total,
-            "monthly_out_total": monthly_out_total,
-
-            # 📊 브랜드별 출고
-            "brand_labels": brand_labels,
-            "brand_values": brand_values,
-        },
-    )
