@@ -13,15 +13,12 @@ from app.db import get_db, upsert_inventory, add_history
 
 router = APIRouter(prefix="/api/init", tags=["초기재고 세팅"])
 
-
 # =====================================================
 # CONFIG
 # =====================================================
 
-# 🔥 정책: 수량만 필수
 REQUIRED_COLS = ["수량"]
 OPTIONAL_COLS = ["창고", "로케이션", "브랜드", "품번", "품명", "LOT", "규격", "비고"]
-
 ALL_COLS = REQUIRED_COLS + [c for c in OPTIONAL_COLS if c not in REQUIRED_COLS]
 
 
@@ -29,29 +26,23 @@ def _norm(v: Any) -> str:
     return ("" if v is None else str(v)).strip()
 
 
-def _q3(v: Any) -> float:
+def _q3(v: Any) -> Decimal:
     try:
         if v is None:
             raise ValueError
         s = str(v).strip()
         if s == "":
             raise ValueError
-        d = Decimal(s).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
-        return float(d)
+        return Decimal(s).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
     except Exception:
-        return 0.0
+        return Decimal("0.000")
 
 
 # =====================================================
-# EXCEL PARSER
+# EXCEL PARSER (중복 키 → 수량 합산)
 # =====================================================
 
 def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Returns:
-      ok_rows: [{warehouse, location, brand, item_code, item_name, lot, spec, qty, note}, ...]
-      err_rows: [{rownum, error, raw}, ...]
-    """
     wb = openpyxl.load_workbook(filename=io.BytesIO(data), data_only=True)
     ws = wb.active
 
@@ -67,13 +58,15 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
     if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"필수 컬럼 누락: {', '.join(missing)} (수량 컬럼이 필요합니다.)",
+            detail=f"필수 컬럼 누락: {', '.join(missing)} (수량 컬럼 필수)",
         )
 
     ok_rows: List[Dict[str, Any]] = []
     err_rows: List[Dict[str, Any]] = []
 
-    # 데이터 시작: 2행부터
+    # -----------------------------
+    # 1차 파싱
+    # -----------------------------
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if row is None or all((_norm(x) == "" for x in row)):
             continue
@@ -83,18 +76,7 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
 
         raw = {h: ("" if i >= len(row) else _norm(row[i])) for h, i in col_index.items()}
 
-        warehouse = get("창고")
-        location = get("로케이션")
-        brand = get("브랜드")
-        item_code = get("품번")
-        item_name = get("품명")
-        lot = get("LOT")
-        spec = get("규격")
-        note = get("비고")
-
-        qty_raw = row[col_index["수량"]]
-        qty = _q3(qty_raw)
-
+        qty = _q3(row[col_index["수량"]])
         if qty <= 0:
             err_rows.append({
                 "rownum": ridx,
@@ -104,20 +86,25 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
             continue
 
         ok_rows.append({
-            "warehouse": warehouse,
-            "location": location,
-            "brand": brand,
-            "item_code": item_code,
-            "item_name": item_name,
-            "lot": lot,
-            "spec": spec,
+            "warehouse": get("창고"),
+            "location": get("로케이션"),
+            "brand": get("브랜드"),
+            "item_code": get("품번"),
+            "item_name": get("품명"),
+            "lot": get("LOT"),
+            "spec": get("규격"),
             "qty": qty,
-            "note": note,
+            "note": get("비고"),
         })
 
-    # 🔁 중복 키 체크 (빈 값 포함)
-    seen = {}
-    dedup_ok: List[Dict[str, Any]] = []
+    # -----------------------------
+    # 2차 처리: 중복 키 → 수량 합산
+    # -----------------------------
+    merged: Dict[
+        Tuple[str, str, str, str, str, str],
+        Dict[str, Any]
+    ] = {}
+
     for r in ok_rows:
         key = (
             r["warehouse"],
@@ -127,21 +114,19 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
             r["lot"],
             r["spec"],
         )
-        if key in seen:
-            err_rows.append({
-                "rownum": None,
-                "error": f"중복 키 발견: {key}",
-                "raw": {"first": seen[key], "dup": r},
-            })
-            continue
-        seen[key] = r
-        dedup_ok.append(r)
 
-    return dedup_ok, err_rows
+        if key not in merged:
+            merged[key] = r.copy()
+        else:
+            merged[key]["qty"] = (
+                merged[key]["qty"] + r["qty"]
+            ).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
+
+    return list(merged.values()), err_rows
 
 
 # =====================================================
-# DB COUNTS / UTILS
+# DB UTILS
 # =====================================================
 
 def _count_inventory() -> int:
@@ -174,24 +159,14 @@ def _make_batch_id() -> str:
 
 @router.get("/status")
 def init_inventory_status():
-    """
-    🔍 초기재고 상태 조회
-    """
-    inv_cnt = _count_inventory()
-    hist_cnt = _count_history()
-
     return {
-        "inventory_count": inv_cnt,
-        "history_count": hist_cnt,
-        "has_data": inv_cnt > 0 or hist_cnt > 0,
+        "inventory_count": _count_inventory(),
+        "history_count": _count_history(),
     }
 
 
 @router.post("/preview")
 async def init_preview(file: UploadFile = File(...)):
-    """
-    초기재고 엑셀 업로드 미리보기(검증)
-    """
     if not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="엑셀(.xlsx) 파일만 업로드 가능합니다.")
 
@@ -200,8 +175,6 @@ async def init_preview(file: UploadFile = File(...)):
 
     return {
         "ok": True,
-        "inventory_count": _count_inventory(),
-        "history_count": _count_history(),
         "summary": {
             "total_rows": len(ok_rows) + len(err_rows),
             "ok_rows": len(ok_rows),
@@ -209,7 +182,7 @@ async def init_preview(file: UploadFile = File(...)):
         },
         "rows_ok": ok_rows[:2000],
         "rows_error": err_rows[:2000],
-        "message": f"총 {len(ok_rows) + len(err_rows)}행 중 정상 {len(ok_rows)}행, 오류 {len(err_rows)}행",
+        "message": f"정상 {len(ok_rows)}행 / 오류 {len(err_rows)}행 (중복은 자동 합산)",
     }
 
 
@@ -220,11 +193,8 @@ async def init_commit(
     confirm: str = Form(""),
     force: int = Form(0),
 ):
-    """
-    초기재고 반영(커밋)
-    """
     if confirm.strip() != "INIT-CONFIRM":
-        raise HTTPException(status_code=400, detail="확인 문구가 필요합니다. confirm=INIT-CONFIRM")
+        raise HTTPException(status_code=400, detail="confirm=INIT-CONFIRM 필요")
 
     if not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="엑셀(.xlsx) 파일만 업로드 가능합니다.")
@@ -233,7 +203,7 @@ async def init_commit(
     if inv_cnt > 0 and int(force) != 1:
         raise HTTPException(
             status_code=400,
-            detail=f"현재 inventory가 {inv_cnt}건 존재합니다. 전체 리셋 후 진행을 권장합니다. (강제: force=1)",
+            detail=f"inventory {inv_cnt}건 존재 → force=1 필요",
         )
 
     data = await file.read()
@@ -248,7 +218,7 @@ async def init_commit(
 
     for r in ok_rows:
         try:
-            ok = upsert_inventory(
+            upsert_inventory(
                 r["warehouse"],
                 r["location"],
                 r["brand"],
@@ -256,11 +226,9 @@ async def init_commit(
                 r["item_name"],
                 r["lot"],
                 r["spec"],
-                r["qty"],
+                float(r["qty"]),
                 note=(r.get("note") or "초기재고"),
             )
-            if not ok:
-                raise ValueError("재고 반영 실패")
 
             add_history(
                 "초기재고",
@@ -273,8 +241,8 @@ async def init_commit(
                 r["spec"],
                 "INIT",
                 r["location"],
-                r["qty"],
-                note=(r.get("note") or "초기재고 세팅"),
+                float(r["qty"]),
+                note="초기재고(엑셀 합산)",
                 batch_id=batch_id,
                 dedup_seconds=0,
             )
@@ -288,11 +256,11 @@ async def init_commit(
         "ok": True,
         "batch_id": batch_id,
         "summary": {
-            "total_ok_rows": len(ok_rows),
+            "total_rows": len(ok_rows),
             "applied": applied,
             "failed": len(failed),
-            "error_rows_in_file": len(err_rows),
+            "excel_errors": len(err_rows),
         },
         "failed_rows": failed[:200],
-        "message": f"초기재고 반영 완료: 정상 {len(ok_rows)}행 중 {applied}행 적용",
+        "message": f"초기재고 반영 완료 (합산 기준)",
     }
