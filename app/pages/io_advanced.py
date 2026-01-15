@@ -14,6 +14,11 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
+# =====================================================
+# 출고 요약 페이지
+# URL: /page/outbound-summary
+# =====================================================
+
 @router.get("/page/outbound-summary", response_class=HTMLResponse)
 def outbound_summary_page(
     request: Request,
@@ -50,7 +55,7 @@ def outbound_summary_page(
         qty = r.get("total_qty") or 0
 
         if not day or not io:
-            continue  # 🔥 NULL 방어
+            continue  # NULL 방어
 
         if day not in daily_map:
             daily_map[day] = {"IN": 0, "OUT": 0}
@@ -94,5 +99,46 @@ def outbound_summary_page(
             "monthly_out_total": monthly_out_total,
             "brand_labels": brand_labels,
             "brand_values": brand_values,
+        },
+    )
+
+
+# =====================================================
+# 입·출고 통합 상세 페이지
+# URL: /page/io-advanced
+# =====================================================
+
+@router.get("/page/io-advanced", response_class=HTMLResponse)
+def io_advanced_page(
+    request: Request,
+    start: str | None = None,
+    end: str | None = None,
+    group: str = "item",
+):
+    # =========================
+    # 0️⃣ 날짜 기본값
+    # =========================
+    now = datetime.now()
+
+    if not start or not end:
+        start = f"{now.year}-{now.month:02d}-01"
+        end = f"{now.year}-{now.month:02d}-{monthrange(now.year, now.month)[1]}"
+
+    # =========================
+    # 1️⃣ 입·출고 통합 데이터
+    # =========================
+    rows = query_io_stats(start, end)
+
+    # =========================
+    # 2️⃣ 렌더링
+    # =========================
+    return templates.TemplateResponse(
+        "io_advanced.html",
+        {
+            "request": request,
+            "rows": rows,
+            "start": start,
+            "end": end,
+            "group": group,
         },
     )
