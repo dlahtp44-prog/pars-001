@@ -18,27 +18,24 @@ def _to_int(v):
         return None
 
 
-def format_rows(rows):
+def _format_rows(rows):
     view_rows = []
 
     for r in rows:
         d = dict(r)
 
         # =========================
-        # 기본 안전 처리
-        # =========================
-        d["lot"] = d.get("lot", "") or ""
-        d["spec"] = d.get("spec", "") or ""
-
-        # 수량 표시용 (0도 허용)
-        raw_qty = d.get("qty")
-        d["qty"] = display_qty(raw_qty)
-
-        # =========================
-        # 타입 통일 (io_type ↔ type)
+        # 타입 통일 (🔥 핵심)
         # =========================
         io_type = d.get("io_type") or d.get("type") or ""
         d["type"] = io_type
+
+        # =========================
+        # LOT / 규격 / 수량 방어
+        # =========================
+        d["lot"] = d.get("lot", "") or ""
+        d["spec"] = d.get("spec", "") or ""
+        d["qty"] = display_qty(d.get("qty"))
 
         # =========================
         # 롤백 가능 여부
