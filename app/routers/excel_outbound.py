@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import openpyxl
 import io
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 
 from app.db import query_inventory, upsert_inventory, add_history
@@ -16,14 +16,35 @@ router = APIRouter(prefix="/api/excel/outbound", tags=["excel-outbound"])
 def _parse_qty(v) -> float:
     if v is None:
         return 0.0
+
     s = str(v).strip()
     if s == "":
         return 0.0
+
     s = s.replace(",", "")
+
     try:
         return float(Decimal(s))
     except (InvalidOperation, ValueError):
         raise ValueError("수량 형식 오류")
+
+
+# =====================================
+# 📅 엑셀 날짜 파싱 (출고일)
+# =====================================
+def _parse_excel_date(v):
+    if v is None or str(v).strip() == "":
+        return None
+
+    if isinstance(v, datetime):
+        return v
+    if isinstance(v, date):
+        return datetime.combine(v, datetime.min.time())
+
+    try:
+        return datetime.strptime(str(v).strip(), "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("출고일 형식 오류 (YYYY-MM-DD)")
 
 
 @router.post("")
@@ -32,12 +53,13 @@ async def excel_outbound(
     file: UploadFile = File(...)
 ):
     """
-    출고 엑셀 업로드 (정책 통일판)
+    출고 엑셀 업로드 (날짜 지정 지원)
 
     ✅ 필수 컬럼
       - 수량
 
     ⭕ 선택 컬럼
+      - 출고일 (YYYY-MM-DD or 엑셀 날짜)
       - 창고
       - 로케이션
       - 브랜드
@@ -105,6 +127,11 @@ async def excel_outbound(
 
             qty = _parse_qty(row[idx["수량"]])
 
+            # 📅 출고일 (선택)
+            out_date = None
+            if "출고일" in idx:
+                out_date = _parse_excel_date(row[idx["출고일"]])
+
             if qty < 0:
                 raise ValueError("수량은 0 이상만 허용")
 
@@ -160,6 +187,7 @@ async def excel_outbound(
                         take,
                         note,
                         batch_id=batch_id,
+                        created_at=out_date,   # 🔥 출고일 반영
                     )
 
                     remain -= take
@@ -168,7 +196,7 @@ async def excel_outbound(
                     raise ValueError("출고 수량이 재고보다 많습니다.")
 
             else:
-                # qty == 0 → 이력만
+                # qty == 0 → 이력만 기록
                 add_history(
                     "출고",
                     warehouse,
@@ -183,6 +211,7 @@ async def excel_outbound(
                     0,
                     note,
                     batch_id=batch_id,
+                    created_at=out_date,
                 )
 
             success += 1
