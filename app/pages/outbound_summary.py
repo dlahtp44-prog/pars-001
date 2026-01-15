@@ -5,9 +5,9 @@ from datetime import datetime
 from calendar import monthrange
 
 from app.db import (
-    query_outbound_summary,            # 테이블용 (출고 기준)
-    query_outbound_monthly_and_brand,  # 브랜드별 출고
-    query_io_stats,                    # 입·출고 통합
+    query_outbound_summary,
+    query_outbound_monthly_and_brand,
+    query_io_stats,
 )
 
 router = APIRouter()
@@ -20,33 +20,41 @@ def outbound_summary_page(
     start: str | None = None,
     end: str | None = None,
 ):
+    # =====================================
+    # 1️⃣ 기본 날짜
+    # =====================================
     now = datetime.now()
 
     if not start or not end:
         start = f"{now.year}-{now.month:02d}-01"
-        last_day = monthrange(now.year, now.month)[1]
-        end = f"{now.year}-{now.month:02d}-{last_day}"
+        end = f"{now.year}-{now.month:02d}-{monthrange(now.year, now.month)[1]}"
 
-    # =============================
-    # 1️⃣ 일자별 출고 테이블
-    # =============================
-    rows = query_outbound_summary(
-        year=int(start[:4]),
-        month=int(start[5:7]),
-    )
+    year = int(start[:4])
+    month = int(start[5:7])
 
-    # =============================
-    # 2️⃣ 입·출고 일자별
-    # =============================
+    # =====================================
+    # 2️⃣ 테이블 : 일자별 출고
+    # =====================================
+    rows = query_outbound_summary(year=year, month=month)
+
+    # =====================================
+    # 3️⃣ 일자별 입·출고
+    # =====================================
     io_rows = query_io_stats(start, end)
 
-    daily_map = {}
+    daily_map: dict[str, dict[str, int]] = {}
+
     for r in io_rows:
         day = r["day"]
         io = r["io_type"]
         qty = r["total_qty"] or 0
 
-        daily_map.setdefault(day, {"IN": 0, "OUT": 0})
+        if not day or not io:
+            continue  # 🔥 안전장치
+
+        if day not in daily_map:
+            daily_map[day] = {"IN": 0, "OUT": 0}
+
         daily_map[day][io] += qty
 
     daily_labels = sorted(daily_map.keys())
@@ -56,33 +64,34 @@ def outbound_summary_page(
     monthly_in_total = sum(daily_in)
     monthly_out_total = sum(daily_out)
 
-    # =============================
-    # 3️⃣ 브랜드별 출고
-    # =============================
-    _, brand_rows = query_outbound_monthly_and_brand(
-        year=int(start[:4]),
-        month=int(start[5:7]),
-    )
+    # =====================================
+    # 4️⃣ 브랜드별 출고
+    # =====================================
+    brand_data = query_outbound_monthly_and_brand(year=year, month=month)
+
+    if isinstance(brand_data, dict):
+        brand_rows = brand_data.get("by_brand", [])
+    else:
+        _, brand_rows = brand_data
 
     brand_labels = [r["brand"] for r in brand_rows]
     brand_values = [r["total_qty"] for r in brand_rows]
 
+    # =====================================
+    # 5️⃣ 렌더링
+    # =====================================
     return templates.TemplateResponse(
         "outbound_summary.html",
         {
             "request": request,
+            "rows": rows,
             "start": start,
             "end": end,
-
-            "rows": rows,
-
             "daily_labels": daily_labels,
             "daily_in": daily_in,
             "daily_out": daily_out,
-
             "monthly_in_total": monthly_in_total,
             "monthly_out_total": monthly_out_total,
-
             "brand_labels": brand_labels,
             "brand_values": brand_values,
         },
