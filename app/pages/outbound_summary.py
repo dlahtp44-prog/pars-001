@@ -20,26 +20,19 @@ def outbound_summary_page(
     start: str | None = None,
     end: str | None = None,
 ):
-    # =====================================
-    # 1️⃣ 기본 날짜
-    # =====================================
     now = datetime.now()
 
     if not start or not end:
         start = f"{now.year}-{now.month:02d}-01"
         end = f"{now.year}-{now.month:02d}-{monthrange(now.year, now.month)[1]}"
 
-    year = int(start[:4])
-    month = int(start[5:7])
+    # 1️⃣ 일자별 출고 테이블
+    rows = query_outbound_summary(
+        year=int(start[:4]),
+        month=int(start[5:7]),
+    )
 
-    # =====================================
-    # 2️⃣ 테이블 : 일자별 출고
-    # =====================================
-    rows = query_outbound_summary(year=year, month=month)
-
-    # =====================================
-    # 3️⃣ 일자별 입·출고
-    # =====================================
+    # 2️⃣ 입·출고 통합
     io_rows = query_io_stats(start, end)
 
     daily_map: dict[str, dict[str, int]] = {}
@@ -50,7 +43,7 @@ def outbound_summary_page(
         qty = r["total_qty"] or 0
 
         if not day or not io:
-            continue  # 🔥 안전장치
+            continue   # 🔥 NULL 방어
 
         if day not in daily_map:
             daily_map[day] = {"IN": 0, "OUT": 0}
@@ -64,10 +57,11 @@ def outbound_summary_page(
     monthly_in_total = sum(daily_in)
     monthly_out_total = sum(daily_out)
 
-    # =====================================
-    # 4️⃣ 브랜드별 출고
-    # =====================================
-    brand_data = query_outbound_monthly_and_brand(year=year, month=month)
+    # 3️⃣ 브랜드별 출고
+    brand_data = query_outbound_monthly_and_brand(
+        year=int(start[:4]),
+        month=int(start[5:7]),
+    )
 
     if isinstance(brand_data, dict):
         brand_rows = brand_data.get("by_brand", [])
@@ -77,9 +71,6 @@ def outbound_summary_page(
     brand_labels = [r["brand"] for r in brand_rows]
     brand_values = [r["total_qty"] for r in brand_rows]
 
-    # =====================================
-    # 5️⃣ 렌더링
-    # =====================================
     return templates.TemplateResponse(
         "outbound_summary.html",
         {
