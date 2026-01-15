@@ -20,7 +20,14 @@ def normalize_qty(value) -> float:
     수량을 소수점 3자리까지 반올림하여 float로 반환
     """
     try:
-        d = Decimal(str(value)).quantize(
+        if value is None:
+            raise ValueError
+
+        s = str(value).strip()
+        if s == "":
+            raise ValueError
+
+        d = Decimal(s).quantize(
             Decimal("0.000"),
             rounding=ROUND_HALF_UP
         )
@@ -38,24 +45,24 @@ def normalize_qty(value) -> float:
 
 @router.post("")
 def move(
-    warehouse: str = Form(...),
-    from_location: str = Form(...),
-    to_location: str = Form(...),
+    warehouse: str = Form(""),          # ✅ 필수 제거
+    from_location: str = Form(""),      # ✅ 필수 제거
+    to_location: str = Form(""),        # ✅ 필수 제거
     brand: str = Form(""),
-    item_code: str = Form(...),
-    item_name: str = Form(...),
-    lot: str = Form(...),
-    spec: str = Form(...),
-    qty: float = Form(...),
+    item_code: str = Form(""),          # ✅ 필수 제거
+    item_name: str = Form(""),          # ✅ 필수 제거
+    lot: str = Form(""),                # ✅ 필수 제거
+    spec: str = Form(""),               # ✅ 필수 제거
+    qty: float = Form(...),             # 🔥 수량만 필수
     note: str = Form(""),
     operator: str = Form(""),
 ):
     """
     ✅ 이동 처리
+    - 창고/로케이션/품번/LOT/규격 없어도 이동 가능
     - 소수점 3자리 수량 지원
-    - 출발지 재고 부족 시 차단
     - 출발/도착 동일 로케이션 차단
-    - history에 '이동' 기록
+    - history 기록
     """
 
     qty_norm = normalize_qty(qty)
@@ -66,7 +73,8 @@ def move(
             detail="이동 수량은 0보다 커야 합니다."
         )
 
-    if from_location.strip() == to_location.strip():
+    # 출발/도착 동일 로케이션 차단 (빈 값 포함)
+    if (from_location or "").strip() == (to_location or "").strip():
         raise HTTPException(
             status_code=400,
             detail="출발/도착 로케이션이 동일합니다."
