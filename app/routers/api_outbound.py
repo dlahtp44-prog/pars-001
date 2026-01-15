@@ -22,7 +22,14 @@ def normalize_qty(value) -> float:
     수량을 소수점 3자리까지 반올림하여 float로 반환
     """
     try:
-        d = Decimal(str(value)).quantize(
+        if value is None:
+            raise ValueError
+
+        s = str(value).strip()
+        if s == "":
+            raise ValueError
+
+        d = Decimal(s).quantize(
             Decimal("0.000"),
             rounding=ROUND_HALF_UP
         )
@@ -40,19 +47,20 @@ def normalize_qty(value) -> float:
 
 @router.post("")
 def outbound(
-    warehouse: str = Form(...),
-    location: str = Form(...),
+    warehouse: str = Form(""),      # ✅ 필수 제거
+    location: str = Form(""),       # ✅ 필수 제거
     brand: str = Form(""),
-    item_code: str = Form(...),
-    item_name: str = Form(...),
-    lot: str = Form(...),
-    spec: str = Form(...),
-    qty: float = Form(...),
+    item_code: str = Form(""),      # ✅ 필수 제거
+    item_name: str = Form(""),      # ✅ 필수 제거
+    lot: str = Form(""),            # ✅ 필수 제거
+    spec: str = Form(""),           # ✅ 필수 제거
+    qty: float = Form(...),         # 🔥 수량만 필수
     note: str = Form(""),
     operator: str = Form(""),
 ):
     """
     ✅ 출고 처리 (STEP 3 반영)
+    - 창고/로케이션/품번/LOT/규격 없어도 출고 가능
     - 소수점 3자리 수량 지원
     - 서버 기준 재고 재검증 (동시 출고 방어)
     - 브랜드/품명 자동 보정
@@ -122,7 +130,7 @@ def outbound(
         note=note,
     )
     if not ok:
-        # 이 케이스는 동시 출고 등 극단 상황
+        # 동시 출고 등 극단 상황
         raise HTTPException(
             status_code=409,
             detail="재고가 변경되어 출고에 실패했습니다. 다시 시도하세요."
