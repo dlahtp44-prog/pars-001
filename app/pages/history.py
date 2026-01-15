@@ -18,15 +18,38 @@ def _to_int(v):
         return None
 
 
-def _format_rows(rows):
+def format_rows(rows):
     view_rows = []
+
     for r in rows:
         d = dict(r)
-        d["qty"] = display_qty(d.get("qty"))
+
+        # =========================
+        # 기본 안전 처리
+        # =========================
+        d["lot"] = d.get("lot", "") or ""
+        d["spec"] = d.get("spec", "") or ""
+
+        # 수량 표시용 (0도 허용)
+        raw_qty = d.get("qty")
+        d["qty"] = display_qty(raw_qty)
+
+        # =========================
+        # 타입 통일 (io_type ↔ type)
+        # =========================
+        io_type = d.get("io_type") or d.get("type") or ""
+        d["type"] = io_type
+
+        # =========================
+        # 롤백 가능 여부
+        # =========================
         d["can_rollback"] = (
-            d["type"] in ("입고", "출고", "이동") and not d.get("rolled_back", 0)
+            io_type in ("입고", "출고", "이동", "초기재고")
+            and not d.get("rolled_back", 0)
         )
+
         view_rows.append(d)
+
     return view_rows
 
 
