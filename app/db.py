@@ -1171,11 +1171,12 @@ from datetime import datetime
 
 def query_outbound_summary(year: int, month: int):
     """
-    출고 통계 (월별 / 일자별)
+    출고 통계 (일자별)
     - history 테이블 기준
-    - type = 'OUT' 만 집계
+    - 출고 유형 모두 포함
     - MOVE 자동 제외
     """
+
     conn = get_db()
     try:
         cur = conn.cursor()
@@ -1186,7 +1187,7 @@ def query_outbound_summary(year: int, month: int):
             SUM(h.qty) AS total_qty
         FROM history h
         WHERE
-            h.type = 'OUT'
+            h.type IN ('OUT', 'OUTBOUND', '출고', 'CS_OUT')
             AND strftime('%Y', h.created_at) = ?
             AND strftime('%m', h.created_at) = ?
         GROUP BY DATE(h.created_at)
@@ -1200,99 +1201,87 @@ def query_outbound_summary(year: int, month: int):
         conn.close()
 
 
+
 def query_outbound_monthly_and_brand(*, year: int, month: int):
     """
-    1️⃣ 월별 누적 출고 (일자 기준)
-    2️⃣ 브랜드별 출고 합계
-    - OUT 만 집계
-    - MOVE 자동 제외
+    1️⃣ 월별 누적 출고
+    2️⃣ 브랜드별 출고 집계
+    - history 기준
+    - 출고 유형만 포함
     """
 
     conn = get_db()
     try:
         cur = conn.cursor()
 
-        # =========================
-        # 1️⃣ 월별 누적 출고
-        # =========================
-        cur.execute(
-            """
+        # 1️⃣ 월 누적 출고
+        cur.execute("""
             SELECT
-                DATE(created_at) AS day,
-                SUM(qty) AS daily_qty
+                SUM(qty) AS total_qty
             FROM history
-            WHERE type = 'OUT'
+            WHERE type IN ('OUT', 'OUTBOUND', '출고', 'CS_OUT')
               AND strftime('%Y', created_at) = ?
               AND strftime('%m', created_at) = ?
-            GROUP BY DATE(created_at)
-            ORDER BY day
-            """,
-            (str(year), f"{month:02d}")
-        )
+        """, (str(year), f"{month:02d}"))
 
-        rows = cur.fetchall()
+        monthly_total = cur.fetchone()["total_qty"] or 0
 
-        cumulative = []
-        running = 0
-        for r in rows:
-            running += r["daily_qty"]
-            cumulative.append({
-                "day": r["day"],
-                "cumulative_qty": running,
-            })
-
-        # =========================
         # 2️⃣ 브랜드별 출고
-        # =========================
-        cur.execute(
-            """
+        cur.execute("""
             SELECT
                 brand,
                 SUM(qty) AS total_qty
             FROM history
-            WHERE type = 'OUT'
+            WHERE type IN ('OUT', 'OUTBOUND', '출고', 'CS_OUT')
               AND strftime('%Y', created_at) = ?
               AND strftime('%m', created_at) = ?
             GROUP BY brand
             ORDER BY total_qty DESC
-            """,
-            (str(year), f"{month:02d}")
-        )
+        """, (str(year), f"{month:02d}"))
 
-        brands = [dict(r) for r in cur.fetchall()]
+        brand_rows = [dict(r) for r in cur.fetchall()]
 
-        return cumulative, brands
+        return {
+            "monthly_total": monthly_total,
+            "by_brand": brand_rows,
+        }
 
     finally:
         conn.close()
 
 
-# ==================================================
+
+# =========================================
 # 입·출고 통계 (실제 history.type 기준)
-# ==================================================
+# =========================================
 def query_io_stats(start_date: str, end_date: str):
     conn = get_db()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    cur.execute("""
-        SELECT
-            date(created_at) AS day,
-            CASE
-                WHEN type IN ('IN','INBOUND') THEN 'IN'
-                WHEN type IN ('OUT','OUTBOUND','CS_OUT') THEN 'OUT'
-            END AS io_type,
-            SUM(qty) AS total_qty
-        FROM history
-        WHERE type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')
-          AND created_at BETWEEN ? AND ?
-        GROUP BY day, io_type
-        ORDER BY day
-    """, (
-        f"{start_date} 00:00:00",
-        f"{end_date} 23:59:59"
-    ))
+        cur.execute("""
+            SELECT
+                DATE(created_at) AS day,
+                CASE
+                    WHEN type IN ('IN','INBOUND') THEN 'IN'
+                    WHEN type IN ('OUT','OUTBOUND','CS_OUT','출고') THEN 'OUT'
+                END AS io_type,
+                SUM(qty) AS total_qty
+            FROM history
+            WHERE type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT','출고')
+              AND created_at BETWEEN ? AND ?
+            GROUP BY day, io_type
+            ORDER BY day
+        """, (
+            f"{start_date} 00:00:00",
+            f"{end_date} 23:59:59"
+        ))
 
-    return cur.fetchall()
+        return [dict(r) for r in cur.fetchall()]
+
+    finally:
+        conn.close()
+
 
 
 
