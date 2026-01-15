@@ -1301,10 +1301,10 @@ def query_io_group_stats(
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # 🔑 그룹 컬럼 매핑 (네 DB 기준)
+        # 🔑 그룹 컬럼 (실제 DB 기준)
         if group == "item":
-            select_cols = "h.brand, h.sku AS item_code, h.name AS item_name"
-            group_by = "h.brand, h.sku, h.name"
+            select_cols = "h.brand, h.item_code, h.item_name"
+            group_by = "h.brand, h.item_code, h.item_name"
         elif group == "spec":
             select_cols = "h.brand, h.spec"
             group_by = "h.brand, h.spec"
@@ -1315,7 +1315,7 @@ def query_io_group_stats(
         where = []
         params = []
 
-        # 🔥 날짜는 DATE 기준으로
+        # 🔥 날짜 비교는 DATE 기준 (ISO T 대응)
         where.append("DATE(h.created_at) BETWEEN DATE(?) AND DATE(?)")
         params.extend([start_date, end_date])
 
@@ -1327,7 +1327,9 @@ def query_io_group_stats(
 
         if keyword:
             kw = f"%{keyword}%"
-            where.append("(h.brand LIKE ? OR h.sku LIKE ? OR h.name LIKE ? OR h.spec LIKE ?)")
+            where.append(
+                "(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)"
+            )
             params.extend([kw, kw, kw, kw])
 
         sql = f"""
