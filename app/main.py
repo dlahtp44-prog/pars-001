@@ -69,6 +69,7 @@ from app.pages import init_inventory
 from app.pages import admin_reset
 from app.pages.outbound_summary import router as outbound_summary_router
 from app.pages import inventory_as_of
+from app.pages.io_advanced import router as io_advanced_router 
 
 # ✅ 이력 엑셀 (pandas 없는 버전)
 from app.routers.excel_history import router as excel_history_router
@@ -102,6 +103,8 @@ app.include_router(api_excel_history.router)
 app.include_router(outbound_summary_router)
 app.include_router(inventory_as_of.router)
 app.include_router(api_stats_router)
+app.include_router(io_advanced_router)
+
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
 
