@@ -51,19 +51,20 @@ def normalize_qty(value) -> float:
 
 @router.post("")
 def inbound(
-    warehouse: str = Form(...),
-    location: str = Form(...),
+    warehouse: str = Form(""),     # ✅ 필수 제거
+    location: str = Form(""),      # ✅ 필수 제거
     brand: str = Form(""),
-    item_code: str = Form(...),
-    item_name: str = Form(...),
-    lot: str = Form(...),
-    spec: str = Form(...),
-    qty: float = Form(...),   # 🔥 float 유지 (절대 int로 바꾸지 말 것)
+    item_code: str = Form(""),     # ✅ 필수 제거
+    item_name: str = Form(""),     # ✅ 필수 제거
+    lot: str = Form(""),           # ✅ 필수 제거
+    spec: str = Form(""),          # ✅ 필수 제거
+    qty: float = Form(...),        # 🔥 수량만 필수
     note: str = Form(""),
     operator: str = Form(""),
 ):
     """
     ✅ 수기 입고 처리
+    - 창고/로케이션/품번/LOT/규격 없어도 입고 가능
     - 소수점 3자리 수량 지원
     - 재고 반영
     - history 기록
@@ -107,7 +108,7 @@ def inbound(
         spec=spec,
         from_location="입고",
         to_location=location,
-        qty=qty_norm,        # 🔥 이력도 동일 수량
+        qty=qty_norm,
         note=note,
     )
 
