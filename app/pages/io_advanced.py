@@ -11,43 +11,36 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/page/io-advanced", response_class=HTMLResponse)
 def io_advanced_page(
     request: Request,
-    start: str = "",
-    end: str = "",
+    start: str | None = None,
+    end: str | None = None,
     group: str = "item",
     brand: str = "",
     keyword: str = "",
 ):
-    """
-    고급 입·출고 통계
-    - 그룹: brand / item / spec
-    - 기간 내 입고 / 출고 / 순증감
-    """
+    if not start or not end:
+        now = datetime.now()
+        start = f"{now.year}-{now.month:02d}-01"
+        end = f"{now.year}-{now.month:02d}-{monthrange(now.year, now.month)[1]}"
 
-    rows = []
-
-    # 날짜가 둘 다 있을 때만 조회
-    if start and end:
-        rows = query_io_group_stats(
-            start_date=start,
-            end_date=end,
-            group=group,
-            brand=brand,
-            keyword=keyword,
-        )
+    rows = query_io_group_stats(
+        start=start,
+        end=end,
+        group=group,
+        brand=brand,
+        keyword=keyword,
+    )
 
     return templates.TemplateResponse(
         "io_advanced.html",
         {
             "request": request,
-
-            # 검색 조건 유지
+            "rows": rows,
             "start": start,
             "end": end,
             "group": group,
             "brand": brand,
             "keyword": keyword,
-
-            # 결과
-            "rows": rows,
         },
+    )
+
     )
