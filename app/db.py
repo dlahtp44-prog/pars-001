@@ -1312,16 +1312,52 @@ def query_io_group_stats(
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # ... (중략: select_cols 설정 부분) ...
+        # =========================================
+        # 1️⃣ 그룹 기준 설정
+        # =========================================
+        if group == "brand":
+            select_cols = "h.brand AS brand"
+            group_by = "h.brand"
 
+        elif group == "item":
+            select_cols = """
+                h.brand AS brand,
+                h.item_code AS item_code,
+                h.item_name AS item_name
+            """
+            group_by = "h.brand, h.item_code, h.item_name"
+
+        elif group == "spec":
+            select_cols = """
+                h.brand AS brand,
+                h.item_code AS item_code,
+                h.item_name AS item_name,
+                h.spec AS spec
+            """
+            group_by = "h.brand, h.item_code, h.item_name, h.spec"
+
+        else:
+            raise ValueError(f"Invalid group: {group}")
+
+        # =========================================
+        # 2️⃣ WHERE 조건
+        # =========================================
         where = []
         params = []
 
-        where.append("DATE(h.created_at) BETWEEN DATE(?) AND DATE(?)")
-        params.extend([start_date, end_date])
+        where.append("h.created_at BETWEEN ? AND ?")
+        params.extend([
+            f"{start_date} 00:00:00",
+            f"{end_date} 23:59:59",
+        ])
 
-        # 🚀 한글 유형('입고', '출고')을 리스트에 추가합니다.
-        where.append("h.type IN ('IN','INBOUND','입고','OUT','OUTBOUND','출고','CS_OUT')")
+        # ✅ 입·출고만 (이동 완전 제외)
+        where.append("""
+            h.type IN (
+                'IN','INBOUND','입고',
+                'OUT','OUTBOUND','출고','CS_OUT'
+            )
+        """)
 
         if brand:
             where.append("h.brand = ?")
@@ -1329,25 +1365,63 @@ def query_io_group_stats(
 
         if keyword:
             kw = f"%{keyword}%"
-            where.append("(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)")
+            where.append("""
+                (
+                    h.brand LIKE ?
+                    OR h.item_code LIKE ?
+                    OR h.item_name LIKE ?
+                    OR h.spec LIKE ?
+                )
+            """)
             params.extend([kw, kw, kw, kw])
 
+        # =========================================
+        # 3️⃣ SQL
+        # =========================================
         sql = f"""
-        SELECT 
+        SELECT
             {select_cols},
-            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END) AS in_qty,
-            SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS out_qty,
-            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END) 
-              - SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS net_qty
+
+            SUM(
+                CASE
+                    WHEN h.type IN ('IN','INBOUND','입고')
+                    THEN h.qty ELSE 0
+                END
+            ) AS in_qty,
+
+            SUM(
+                CASE
+                    WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT')
+                    THEN h.qty ELSE 0
+                END
+            ) AS out_qty,
+
+            SUM(
+                CASE
+                    WHEN h.type IN ('IN','INBOUND','입고')
+                    THEN h.qty ELSE 0
+                END
+            )
+            -
+            SUM(
+                CASE
+                    WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT')
+                    THEN h.qty ELSE 0
+                END
+            ) AS net_qty
+
         FROM history h
         WHERE {" AND ".join(where)}
         GROUP BY {group_by}
         ORDER BY out_qty DESC, in_qty DESC
         """
+
         cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
+
     finally:
         conn.close()
+
 
 
 
