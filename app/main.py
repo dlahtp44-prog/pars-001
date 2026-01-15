@@ -76,6 +76,7 @@ from app.routers.api_rollback_batch import router as api_rollback_batch_router
 from app.routers import api_admin_reset
 from app.routers import api_init_inventory
 from app.routers import api_excel_history
+from app.routers.api_stats import router as api_stats_router
 
 app.include_router(login_router)
 app.include_router(index_router)
@@ -100,7 +101,7 @@ app.include_router(admin_reset.router)
 app.include_router(api_excel_history.router)
 app.include_router(outbound_summary_router)
 app.include_router(inventory_as_of.router)
-
+app.include_router(api_stats_router)
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
 
