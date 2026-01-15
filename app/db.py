@@ -1266,6 +1266,29 @@ def query_outbound_monthly_and_brand(*, year: int, month: int):
     finally:
         conn.close()
 
+# =========================
+# 신규: 입·출고 통계
+# =========================
+def query_io_stats(start_date: str, end_date: str):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            date(created_at) as day,
+            type,
+            SUM(qty) as total_qty
+        FROM history
+        WHERE type IN ('IN','OUT')
+          AND created_at BETWEEN ? AND ?
+        GROUP BY day, type
+        ORDER BY day
+    """, (
+        f"{start_date} 00:00:00",
+        f"{end_date} 23:59:59"
+    ))
+
+    return cur.fetchall()
 
 
 
