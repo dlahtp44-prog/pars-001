@@ -18,9 +18,9 @@ router = APIRouter(prefix="/api/init", tags=["초기재고 세팅"])
 # CONFIG
 # =====================================================
 
-# ✅ 기존 "입고 엑셀"과 동일 컬럼 (한글 고정)
-REQUIRED_COLS = ["창고", "로케이션", "품번", "LOT", "규격", "수량"]
-OPTIONAL_COLS = ["브랜드", "품명", "비고"]
+# 🔥 정책: 수량만 필수
+REQUIRED_COLS = ["수량"]
+OPTIONAL_COLS = ["창고", "로케이션", "브랜드", "품번", "품명", "LOT", "규격", "비고"]
 
 ALL_COLS = REQUIRED_COLS + [c for c in OPTIONAL_COLS if c not in REQUIRED_COLS]
 
@@ -31,7 +31,12 @@ def _norm(v: Any) -> str:
 
 def _q3(v: Any) -> float:
     try:
-        d = Decimal(str(v)).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
+        if v is None:
+            raise ValueError
+        s = str(v).strip()
+        if s == "":
+            raise ValueError
+        d = Decimal(s).quantize(Decimal("0.000"), rounding=ROUND_HALF_UP)
         return float(d)
     except Exception:
         return 0.0
@@ -62,7 +67,7 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
     if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"필수 컬럼 누락: {', '.join(missing)} (기존 입고 엑셀 양식과 동일해야 합니다.)",
+            detail=f"필수 컬럼 누락: {', '.join(missing)} (수량 컬럼이 필요합니다.)",
         )
 
     ok_rows: List[Dict[str, Any]] = []
@@ -90,14 +95,6 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
         qty_raw = row[col_index["수량"]]
         qty = _q3(qty_raw)
 
-        if not warehouse or not location or not item_code or not lot or not spec:
-            err_rows.append({
-                "rownum": ridx,
-                "error": "필수값(창고/로케이션/품번/LOT/규격) 누락",
-                "raw": raw
-            })
-            continue
-
         if qty <= 0:
             err_rows.append({
                 "rownum": ridx,
@@ -118,11 +115,18 @@ def _read_excel_rows(data: bytes) -> Tuple[List[Dict[str, Any]], List[Dict[str, 
             "note": note,
         })
 
-    # 중복 키 체크
+    # 🔁 중복 키 체크 (빈 값 포함)
     seen = {}
     dedup_ok: List[Dict[str, Any]] = []
     for r in ok_rows:
-        key = (r["warehouse"], r["location"], r["brand"], r["item_code"], r["lot"], r["spec"])
+        key = (
+            r["warehouse"],
+            r["location"],
+            r["brand"],
+            r["item_code"],
+            r["lot"],
+            r["spec"],
+        )
         if key in seen:
             err_rows.append({
                 "rownum": None,
@@ -172,7 +176,6 @@ def _make_batch_id() -> str:
 def init_inventory_status():
     """
     🔍 초기재고 상태 조회
-    - UI 경고용
     """
     inv_cnt = _count_inventory()
     hist_cnt = _count_history()
