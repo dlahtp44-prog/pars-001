@@ -501,82 +501,119 @@ def query_inventory_smart(q: str | None = None, limit: int = 1000):
 # HISTORY
 # =====================================================
 
+from datetime import datetime, timedelta
+
 def add_history(
-    type, warehouse, operator, brand, item_code, item_name,
-    lot, spec, from_location, to_location, qty,
-    note="", batch_id=None, dedup_seconds=5
+    type,
+    warehouse,
+    operator,
+    brand,
+    item_code,
+    item_name,
+    lot,
+    spec,
+    from_location,
+    to_location,
+    qty,
+    note="",
+    batch_id=None,
+    dedup_seconds=5,
+    created_at=None,          # 🔥 추가
 ):
     conn = get_db()
     try:
         cur = conn.cursor()
-        now_dt = datetime.now()
-        now = now_dt.isoformat(timespec="seconds")
-        threshold = (now_dt - timedelta(seconds=dedup_seconds)).isoformat(timespec="seconds")
 
+        # =========================
+        # 🔥 날짜 결정
+        # =========================
+        base_dt = created_at if created_at else datetime.now()
+        now = base_dt.isoformat(timespec="seconds")
+
+        # 중복 방지 기준 시간
+        threshold = (
+            base_dt - timedelta(seconds=dedup_seconds)
+        ).isoformat(timespec="seconds")
+
+        # =========================
+        # 중복 체크
+        # =========================
         cur.execute("""
             SELECT COUNT(*) FROM history
             WHERE type=? AND warehouse=? AND item_code=? AND lot=? AND spec=?
               AND from_location=? AND to_location=? AND qty=?
               AND created_at >= ?
         """, (
-            _norm(type), _norm(warehouse), _norm(item_code),
-            _norm(lot), _norm(spec),
-            _norm(from_location), _norm(to_location),
-            _q3(qty), threshold
+            _norm(type),
+            _norm(warehouse),
+            _norm(item_code),
+            _norm(lot),
+            _norm(spec),
+            _norm(from_location),
+            _norm(to_location),
+            _q3(qty),
+            threshold,
         ))
         if cur.fetchone()[0] > 0:
             return
 
+        # =========================
+        # 컬럼 확인
+        # =========================
         cur.execute("PRAGMA table_info(history)")
         cols = {r["name"] for r in cur.fetchall()}
 
+        # =========================
+        # INSERT
+        # =========================
         if "batch_id" in cols:
             cur.execute("""
                 INSERT INTO history
                 (type, warehouse, operator, brand, item_code, item_name,
-                 lot, spec, from_location, to_location, qty, note, batch_id, created_at)
+                 lot, spec, from_location, to_location, qty, note,
+                 batch_id, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                _norm(type), _norm(warehouse), _norm(operator), _norm(brand),
-                _norm(item_code), _norm(item_name),
-                _norm(lot), _norm(spec),
-                _norm(from_location), _norm(to_location),
-                _q3(qty), _norm(note), batch_id, now
+                _norm(type),
+                _norm(warehouse),
+                _norm(operator),
+                _norm(brand),
+                _norm(item_code),
+                _norm(item_name),
+                _norm(lot),
+                _norm(spec),
+                _norm(from_location),
+                _norm(to_location),
+                _q3(qty),
+                _norm(note),
+                batch_id,
+                now,
             ))
         else:
             cur.execute("""
                 INSERT INTO history
                 (type, warehouse, operator, brand, item_code, item_name,
-                 lot, spec, from_location, to_location, qty, note, created_at)
+                 lot, spec, from_location, to_location, qty, note,
+                 created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                _norm(type), _norm(warehouse), _norm(operator), _norm(brand),
-                _norm(item_code), _norm(item_name),
-                _norm(lot), _norm(spec),
-                _norm(from_location), _norm(to_location),
-                _q3(qty), _norm(note), now
+                _norm(type),
+                _norm(warehouse),
+                _norm(operator),
+                _norm(brand),
+                _norm(item_code),
+                _norm(item_name),
+                _norm(lot),
+                _norm(spec),
+                _norm(from_location),
+                _norm(to_location),
+                _q3(qty),
+                _norm(note),
+                now,
             ))
 
         conn.commit()
-    finally:
-        conn.close()
-def history_exists_by_token(token: str) -> bool:
-    if not token:
-        return False
 
-    conn = get_db()
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            "SELECT 1 FROM history WHERE token = ? LIMIT 1",
-            (token,)
-        )
-        row = cur.fetchone()
-        return row is not None
-    except Exception:
-        # token 컬럼이 없을 때 대비
-        return False
     finally:
         conn.close()
 
