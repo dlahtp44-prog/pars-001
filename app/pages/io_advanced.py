@@ -34,15 +34,15 @@ def io_advanced_page(
         brand=brand.strip(),
     )
 
-    return templates.TemplateResponse(
-        "io_advanced.html",
-        {
-            "request": request,
-            "start": start,
-            "end": end,
-            "group": group,
-            "keyword": keyword,
-            "brand": brand,
-            "rows": rows,
-        },
-    )
+return templates.TemplateResponse(
+    "io_advanced.html",
+    {
+        "request": request,
+        "start": start,   # 🔑 반드시 넘김
+        "end": end,       # 🔑 반드시 넘김
+        "group": group,
+        "keyword": keyword,
+        "brand": brand,
+        "rows": rows,
+    },
+)
