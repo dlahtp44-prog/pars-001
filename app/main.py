@@ -142,6 +142,7 @@ from app.routers.api_rollback import router as api_rollback_router
 from app.routers.api_erp_verify import router as api_erp_verify_router
 from app.routers.api_excel_outbound_summary import router as api_excel_outbound_summary_router
 from app.routers.api_excel_inventory_as_of import router as excel_inventory_as_of_router
+from app.routers.api_stats import router as api_stats_router 
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -158,3 +159,4 @@ app.include_router(api_rollback_router)
 app.include_router(api_erp_verify_router)
 app.include_router(api_excel_outbound_summary_router)
 app.include_router(excel_inventory_as_of_router)
+app.include_router(api_stats_router)     
