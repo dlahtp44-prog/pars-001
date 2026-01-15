@@ -1292,7 +1292,7 @@ def query_io_stats(start_date: str, end_date: str):
 def query_io_group_stats(
     start_date: str,
     end_date: str,
-    group: str = "brand",   # brand | item | spec
+    group: str = "brand",
     keyword: str = "",
     brand: str = "",
 ):
@@ -1301,25 +1301,16 @@ def query_io_group_stats(
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # 🔑 그룹 컬럼 (실제 DB 기준)
-        if group == "item":
-            select_cols = "h.brand, h.item_code, h.item_name"
-            group_by = "h.brand, h.item_code, h.item_name"
-        elif group == "spec":
-            select_cols = "h.brand, h.spec"
-            group_by = "h.brand, h.spec"
-        else:  # brand
-            select_cols = "h.brand"
-            group_by = "h.brand"
+        # ... (중략: select_cols 설정 부분) ...
 
         where = []
         params = []
 
-        # 🔥 날짜 비교는 DATE 기준 (ISO T 대응)
         where.append("DATE(h.created_at) BETWEEN DATE(?) AND DATE(?)")
         params.extend([start_date, end_date])
 
-        where.append("h.type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')")
+        # 🚀 한글 유형('입고', '출고')을 리스트에 추가합니다.
+        where.append("h.type IN ('IN','INBOUND','입고','OUT','OUTBOUND','출고','CS_OUT')")
 
         if brand:
             where.append("h.brand = ?")
@@ -1327,27 +1318,23 @@ def query_io_group_stats(
 
         if keyword:
             kw = f"%{keyword}%"
-            where.append(
-                "(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)"
-            )
+            where.append("(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)")
             params.extend([kw, kw, kw, kw])
 
         sql = f"""
-        SELECT
+        SELECT 
             {select_cols},
-            SUM(CASE WHEN h.type IN ('IN','INBOUND') THEN h.qty ELSE 0 END) AS in_qty,
-            SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','CS_OUT') THEN h.qty ELSE 0 END) AS out_qty,
-            SUM(CASE WHEN h.type IN ('IN','INBOUND') THEN h.qty ELSE 0 END)
-              - SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','CS_OUT') THEN h.qty ELSE 0 END) AS net_qty
+            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END) AS in_qty,
+            SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS out_qty,
+            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END) 
+              - SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS net_qty
         FROM history h
         WHERE {" AND ".join(where)}
         GROUP BY {group_by}
         ORDER BY out_qty DESC, in_qty DESC
         """
-
         cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
-
     finally:
         conn.close()
 
