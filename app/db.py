@@ -1262,28 +1262,32 @@ import sqlite3
 def query_io_stats(start_date: str, end_date: str):
     conn = get_db()
     try:
-        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 DATE(created_at) AS day,
                 CASE
-                    WHEN type IN ('IN','INBOUND') THEN 'IN'
-                    WHEN type IN ('OUT','OUTBOUND','CS_OUT') THEN 'OUT'
+                    WHEN type IN ('IN', 'INBOUND', '입고') THEN 'IN'
+                    WHEN type IN ('OUT', 'OUTBOUND', 'CS_OUT', '출고') THEN 'OUT'
                 END AS io_type,
                 SUM(qty) AS total_qty
             FROM history
-            WHERE type IN ('IN','INBOUND','OUT','OUTBOUND','CS_OUT')
-              AND DATE(created_at) BETWEEN DATE(?) AND DATE(?)
+            WHERE created_at BETWEEN ? AND ?
             GROUP BY day, io_type
             ORDER BY day
-        """, (start_date, end_date))
+            """,
+            (
+                f"{start_date} 00:00:00",
+                f"{end_date} 23:59:59",
+            ),
+        )
 
         return [dict(r) for r in cur.fetchall()]
-
     finally:
         conn.close()
+
 
 
 # =========================
