@@ -1301,7 +1301,7 @@ def query_io_stats(start_date: str, end_date: str):
 def query_io_group_stats(
     start_date: str,
     end_date: str,
-    group: str = "brand",
+    group: str = "item",
     keyword: str = "",
     brand: str = "",
 ):
@@ -1310,22 +1310,10 @@ def query_io_group_stats(
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # =========================================
-        # 1️⃣ 그룹 기준 설정
-        # =========================================
         if group == "brand":
             select_cols = "h.brand AS brand"
             group_by = "h.brand"
-
         elif group == "item":
-            select_cols = """
-                h.brand AS brand,
-                h.item_code AS item_code,
-                h.item_name AS item_name
-            """
-            group_by = "h.brand, h.item_code, h.item_name"
-
-        elif group == "spec":
             select_cols = """
                 h.brand AS brand,
                 h.item_code AS item_code,
@@ -1333,29 +1321,16 @@ def query_io_group_stats(
                 h.spec AS spec
             """
             group_by = "h.brand, h.item_code, h.item_name, h.spec"
-
         else:
-            raise ValueError(f"Invalid group: {group}")
+            raise ValueError("Invalid group type")
 
-        # =========================================
-        # 2️⃣ WHERE 조건
-        # =========================================
         where = []
         params = []
 
-        where.append("h.created_at BETWEEN ? AND ?")
-        params.extend([
-            f"{start_date} 00:00:00",
-            f"{end_date} 23:59:59",
-        ])
+        where.append("DATE(h.created_at) BETWEEN DATE(?) AND DATE(?)")
+        params.extend([start_date, end_date])
 
-        # ✅ 입·출고만 (이동 완전 제외)
-        where.append("""
-            h.type IN (
-                'IN','INBOUND','입고',
-                'OUT','OUTBOUND','출고','CS_OUT'
-            )
-        """)
+        where.append("h.type IN ('IN','INBOUND','입고','OUT','OUTBOUND','출고','CS_OUT')")
 
         if brand:
             where.append("h.brand = ?")
@@ -1363,51 +1338,18 @@ def query_io_group_stats(
 
         if keyword:
             kw = f"%{keyword}%"
-            where.append("""
-                (
-                    h.brand LIKE ?
-                    OR h.item_code LIKE ?
-                    OR h.item_name LIKE ?
-                    OR h.spec LIKE ?
-                )
-            """)
+            where.append(
+                "(h.brand LIKE ? OR h.item_code LIKE ? OR h.item_name LIKE ? OR h.spec LIKE ?)"
+            )
             params.extend([kw, kw, kw, kw])
 
-        # =========================================
-        # 3️⃣ SQL
-        # =========================================
         sql = f"""
         SELECT
             {select_cols},
-
-            SUM(
-                CASE
-                    WHEN h.type IN ('IN','INBOUND','입고')
-                    THEN h.qty ELSE 0
-                END
-            ) AS in_qty,
-
-            SUM(
-                CASE
-                    WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT')
-                    THEN h.qty ELSE 0
-                END
-            ) AS out_qty,
-
-            SUM(
-                CASE
-                    WHEN h.type IN ('IN','INBOUND','입고')
-                    THEN h.qty ELSE 0
-                END
-            )
-            -
-            SUM(
-                CASE
-                    WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT')
-                    THEN h.qty ELSE 0
-                END
-            ) AS net_qty
-
+            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END) AS in_qty,
+            SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS out_qty,
+            SUM(CASE WHEN h.type IN ('IN','INBOUND','입고') THEN h.qty ELSE 0 END)
+              - SUM(CASE WHEN h.type IN ('OUT','OUTBOUND','출고','CS_OUT') THEN h.qty ELSE 0 END) AS net_qty
         FROM history h
         WHERE {" AND ".join(where)}
         GROUP BY {group_by}
@@ -1416,9 +1358,9 @@ def query_io_group_stats(
 
         cur.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
-
     finally:
         conn.close()
+
 
 
 
