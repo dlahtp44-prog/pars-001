@@ -20,8 +20,12 @@
         }
         .filter {
             margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
         }
-        select, button {
+        input[type="date"], button {
             padding: 6px 10px;
             font-size: 14px;
             background: #0b1220;
@@ -37,6 +41,9 @@
         }
         .actions {
             margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .summary {
             display: flex;
@@ -95,50 +102,55 @@
 </head>
 <body>
 
-<h1>📊 입·출고 통계 ({{ year }}년 {{ month }}월)</h1>
+<h1>📊 입·출고 통계</h1>
 
-<!-- 조회 필터 -->
+<!-- 조회 필터 : 기간 기준 -->
 <form class="filter" method="get">
     <label>
-        연도:
-        <select name="year">
-            {% for y in range(year-5, year+1) %}
-                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                    {{ y }}년
-                </option>
-            {% endfor %}
-        </select>
+        시작일
+        <input type="date" name="start" value="{{ start }}">
     </label>
 
     <label>
-        월:
-        <select name="month">
-            {% for m in range(1, 13) %}
-                <option value="{{ m }}" {% if m == month %}selected{% endif %}>
-                    {{ m }}월
-                </option>
-            {% endfor %}
-        </select>
+        종료일
+        <input type="date" name="end" value="{{ end }}">
     </label>
 
     <button type="submit">조회</button>
+
+    <!-- 월 단위 빠른 조회 -->
+    <button type="button" onclick="setThisMonth()">이번 달</button>
 </form>
 
 <!-- 액션 -->
 <div class="actions">
-    <button type="button" onclick="location.href='/'">
+    <button
+        type="button"
+        onclick="location.href='/api/excel/io-stats?start={{ start }}&end={{ end }}'">
+        📥 입·출고 엑셀 다운로드
+    </button>
+
+    <button
+        type="button"
+        onclick="location.href='/'">
         ⬅ 메인으로
+    </button>
+
+    <button
+        type="button"
+        onclick="alert('브랜드/품목/규격별 통계는 다음 단계에서 연결됩니다')">
+        📊 고급 통계
     </button>
 </div>
 
 <!-- 월 누적 요약 -->
 <div class="summary">
     <div class="summary-box">
-        <h4>월 누적 입고</h4>
+        <h4>기간 내 입고 합계</h4>
         <p class="in">{{ monthly_in_total }}</p>
     </div>
     <div class="summary-box">
-        <h4>월 누적 출고</h4>
+        <h4>기간 내 출고 합계</h4>
         <p class="out">{{ monthly_out_total }}</p>
     </div>
 </div>
@@ -199,11 +211,10 @@
     </tbody>
 </table>
 
-<!-- 📊 Chart.js -->
+<!-- Chart.js -->
 <script>
     if (dailyLabels.length > 0) {
-        const ctx1 = document.getElementById("dailyChart").getContext("2d");
-        new Chart(ctx1, {
+        new Chart(document.getElementById("dailyChart"), {
             type: "line",
             data: {
                 labels: dailyLabels,
@@ -224,18 +235,12 @@
                     }
                 ]
             },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
         });
     }
 
     if (brandLabels.length > 0) {
-        const ctx2 = document.getElementById("brandChart").getContext("2d");
-        new Chart(ctx2, {
+        new Chart(document.getElementById("brandChart"), {
             type: "bar",
             data: {
                 labels: brandLabels,
@@ -245,13 +250,19 @@
                     backgroundColor: "#3b82f6"
                 }]
             },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
         });
+    }
+
+    function setThisMonth() {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, "0");
+        const first = `${y}-${m}-01`;
+        const last = new Date(y, today.getMonth() + 1, 0).toISOString().slice(0,10);
+
+        document.querySelector("input[name=start]").value = first;
+        document.querySelector("input[name=end]").value = last;
     }
 </script>
 
