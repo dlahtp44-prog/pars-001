@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CS / 파손 등록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        /* ===== 엑셀형 입력 ===== */
+        .header-row,
+        .input-row {
+            display: grid;
+            grid-template-columns:
+                120px 120px 120px 120px 200px 90px 110px 70px 90px;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .header-row span {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .input-row input {
+            height: 32px;
+            padding: 4px 6px;
+            font-size: 13px;
+        }
+
+        .input-row input[type="number"] {
+            text-align: right;
+        }
+
+        .checkbox {
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* ===== 파손 유형 ===== */
+        .damage-box {
+            border: 1px solid #ccc;
+            padding: 12px;
+            border-radius: 6px;
+            background: #fafafa;
+            max-width: 500px;
+        }
+
+        .damage-box label {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+            height: 36px;
+            margin-top: 6px;
+            font-size: 14px;
+        }
+
+        textarea {
+            width: 100%;
+            margin-top: 6px;
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        /* ===== 버튼 ===== */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        button {
+            padding: 10px 24px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: #1f2937;
+            color: #fff;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🛠 CS / 파손 등록</h2>
+
+<form method="post" action="/api/damage">
+
+    <!-- 발생일 -->
+    <div class="section">
+        <label><strong>발생일</strong></label><br>
+        <input type="date" name="occurred_at"
+               value="{{ request.state.today if request.state.today else '' }}"
+               required>
+    </div>
+
+    <!-- 컬럼 헤더 -->
+    <div class="header-row">
+        <span>창고</span>
+        <span>로케이션</span>
+        <span>브랜드</span>
+        <span>품번</span>
+        <span>품명</span>
+        <span>LOT</span>
+        <span>규격</span>
+        <span>수량</span>
+        <span>재고차감</span>
+    </div>
+
+    <!-- 입력 -->
+    <div class="input-row section">
+        <input name="warehouse" required>
+        <input name="location" required>
+        <input name="brand">
+        <input name="item_code" required>
+        <input name="item_name" required>
+        <input name="lot" required>
+        <input name="spec" required>
+        <input name="qty" type="number" min="1" required>
+
+        <div class="checkbox">
+            <input type="checkbox" name="deduct_inventory" value="1">
+        </div>
+    </div>
+
+    <!-- 파손 유형 -->
+    <div class="section damage-box">
+        <label>파손 유형</label>
+        <select name="damage_code_id" required>
+            <option value="">선택</option>
+            {% for c in damage_codes %}
+                <option value="{{ c.id }}">
+                    {{ c.category }} / {{ c.type }} / {{ c.situation }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label style="margin-top:10px; display:block;">상세 내용</label>
+        <textarea name="detail" rows="3"
+                  placeholder="파손 상황을 간단히 입력하세요"></textarea>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="btn-row">
+        <button type="submit" class="btn-primary">등록</button>
+        <a href="/">
+            <button type="button" class="btn-secondary">메인으로 돌아가기</button>
+        </a>
+    </div>
+
+</form>
+
+</body>
+</html>
