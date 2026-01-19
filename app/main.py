@@ -100,7 +100,7 @@ app.include_router(api_init_inventory.router)
 app.include_router(init_inventory.router)
 app.include_router(admin_reset.router)
 app.include_router(api_excel_history.router)
-app.include_router(outbound_summary_router)
+app.include_router(outbound_summary.router)
 
 app.include_router(inventory_as_of.router)
 app.include_router(api_stats_router)
