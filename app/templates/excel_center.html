@@ -1,66 +1,0 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <title>엑셀 센터</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/app.css">
-</head>
-<body>
-
-<h2>📊 엑셀 센터</h2>
-
-<hr>
-
-<h3>📥 입고 엑셀 업로드</h3>
-<form action="/api/excel/inbound" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".xlsx" required>
-    <button type="submit">입고 업로드</button>
-</form>
-
-<hr>
-
-<h3>📤 출고 엑셀 업로드</h3>
-<form action="/api/excel/outbound" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".xlsx" required>
-    <button type="submit">출고 업로드</button>
-</form>
-
-<hr>
-
-<h3>📦 재고 엑셀 다운로드</h3>
-<form action="/page/inventory/excel" method="get">
-    <button type="submit">재고 다운로드</button>
-</form>
-
-<hr>
-
-<h3>🕘 이력 엑셀 다운로드</h3>
-<form action="/page/history/excel" method="get">
-    <button type="submit">이력 다운로드</button>
-</form>
-
-<hr>
-
-<!-- ✅ 메인으로 돌아가기 -->
-<div style="margin-top:30px; text-align:center;">
-    <a href="/" style="text-decoration:none;">
-        <button
-            type="button"
-            style="
-                padding:12px 40px;
-                font-size:15px;
-                border-radius:6px;
-                border:1px solid #444;
-                background:#1f2937;
-                color:#fff;
-                cursor:pointer;
-            "
-        >
-            메인으로 돌아가기
-        </button>
-    </a>
-</div>
-
-</body>
-</html>
