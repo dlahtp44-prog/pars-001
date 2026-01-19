@@ -18,14 +18,17 @@ app = FastAPI(
 def on_startup():
     init_db()
 
-    raw_flag = os.getenv("RESET_DB", "1").strip().lower()
+    env = os.getenv("ENV", "development").strip().lower()
+
+    raw_flag = os.getenv("RESET_DB", "0").strip().lower()
     reset_flag = raw_flag in {"1", "true", "yes", "y", "on"}
 
-    if reset_flag:
-        print(f"⚠ RESET_DB={raw_flag} → inventory/history 초기화 실행")
+    if reset_flag and env != "production":
+        print(f"⚠ RESET_DB={raw_flag} (env={env}) → inventory/history 초기화 실행")
         reset_inventory_and_history()
     else:
-        print(f"ℹ RESET_DB={raw_flag} → 데이터 유지")
+        print(f"ℹ RESET_DB={raw_flag} (env={env}) → 데이터 유지")
+
 
 # =========================
 # SESSION
@@ -62,18 +65,19 @@ from app.pages.damage_history import router as damage_history_page_router
 from app.pages.labels import router as labels_page_router
 from app.pages.erp_verify import router as erp_verify_page_router
 from app.pages.calendar import router as calendar_page_router
-
-from app.pages.outbound_summary import router as outbound_summary_router
-
 from app.pages import init_inventory
 from app.pages import admin_reset
+from app.pages.outbound_summary import router as outbound_summary_router
+from app.pages import inventory_as_of
+from app.pages.io_advanced import router as io_advanced_router 
 
 # ✅ 이력 엑셀 (pandas 없는 버전)
 from app.routers.excel_history import router as excel_history_router
 from app.routers.api_rollback_batch import router as api_rollback_batch_router
 from app.routers import api_admin_reset
 from app.routers import api_init_inventory
-
+from app.routers import api_excel_history
+from app.routers.api_stats import router as api_stats_router
 
 app.include_router(login_router)
 app.include_router(index_router)
@@ -95,7 +99,11 @@ app.include_router(api_admin_reset.router)
 app.include_router(api_init_inventory.router)
 app.include_router(init_inventory.router)
 app.include_router(admin_reset.router)
-app.include_router(outbound_summary.router)
+app.include_router(api_excel_history.router)
+app.include_router(outbound_summary_router)
+app.include_router(inventory_as_of.router)
+app.include_router(api_stats_router)
+app.include_router(io_advanced_router)
 
 # 🔥 이력 엑셀 다운로드
 app.include_router(excel_history_router)
@@ -136,6 +144,8 @@ from app.routers.api_admin import router as api_admin_router
 from app.routers.api_rollback import router as api_rollback_router
 from app.routers.api_erp_verify import router as api_erp_verify_router
 from app.routers.api_excel_outbound_summary import router as api_excel_outbound_summary_router
+from app.routers.api_excel_inventory_as_of import router as excel_inventory_as_of_router
+from app.routers.api_stats import router as api_stats_router 
 
 app.include_router(api_inbound_router)
 app.include_router(api_outbound_router)
@@ -151,3 +161,5 @@ app.include_router(api_admin_router)
 app.include_router(api_rollback_router)
 app.include_router(api_erp_verify_router)
 app.include_router(api_excel_outbound_summary_router)
+app.include_router(excel_inventory_as_of_router)
+app.include_router(api_stats_router)     

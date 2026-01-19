@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>입·출고 통계</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            padding: 16px;
+            background: #0e1117;
+            color: #e5e7eb;
+        }
+        h1, h3 {
+            margin-bottom: 12px;
+        }
+        .filter {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        input[type="date"], button {
+            padding: 6px 10px;
+            font-size: 14px;
+            background: #0b1220;
+            color: #e5e7eb;
+            border: 1px solid #2d333b;
+            border-radius: 6px;
+        }
+        button {
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1f2937;
+        }
+        .actions {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .summary {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            flex: 1;
+            background: #161b22;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .summary-box h4 {
+            margin-bottom: 8px;
+            font-weight: normal;
+            color: #9ca3af;
+        }
+        .summary-box p {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .in { color: #22c55e; }
+        .out { color: #ef4444; }
+
+        .chart-box {
+            margin-bottom: 24px;
+            background: #161b22;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        .chart-empty {
+            text-align: center;
+            padding: 40px 0;
+            color: #9ca3af;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: #161b22;
+        }
+        th, td {
+            border-bottom: 1px solid #2d333b;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #0b1220;
+        }
+        .empty {
+            padding: 16px;
+            text-align: center;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 입·출고 통계</h1>
+
+<!-- 조회 필터 : 기간 기준 -->
+<form class="filter" method="get">
+    <label>
+        시작일
+        <input type="date" name="start" value="{{ start }}">
+    </label>
+
+    <label>
+        종료일
+        <input type="date" name="end" value="{{ end }}">
+    </label>
+
+    <button type="submit">조회</button>
+
+    <!-- 월 단위 빠른 조회 -->
+    <button type="button" onclick="setThisMonth()">이번 달</button>
+</form>
+
+<!-- 액션 -->
+<div class="actions">
+    <button
+        type="button"
+        onclick="location.href='/api/excel/io-stats?start={{ start }}&end={{ end }}'">
+        📥 입·출고 엑셀 다운로드
+    </button>
+
+    <button
+        type="button"
+        onclick="location.href='/'">
+        ⬅ 메인으로
+    </button>
+
+<button
+  type="button"
+  onclick="location.href='/page/io-advanced?start={{ start }}&end={{ end }}&group=item'">
+  📊 고급 통계
+</button>
+
+
+<!-- 월 누적 요약 -->
+<div class="summary">
+    <div class="summary-box">
+        <h4>기간 내 입고 합계</h4>
+        <p class="in">{{ monthly_in_total }}</p>
+    </div>
+    <div class="summary-box">
+        <h4>기간 내 출고 합계</h4>
+        <p class="out">{{ monthly_out_total }}</p>
+    </div>
+</div>
+
+<!-- 🔑 서버 데이터 → JS -->
+<script>
+    const dailyLabels = {{ daily_labels | tojson }};
+    const dailyIn = {{ daily_in | tojson }};
+    const dailyOut = {{ daily_out | tojson }};
+
+    const brandLabels = {{ brand_labels | tojson }};
+    const brandValues = {{ brand_values | tojson }};
+</script>
+
+<!-- 입·출고 추이 -->
+<div class="chart-box">
+    <h3>📈 일자별 입·출고</h3>
+
+    {% if daily_labels %}
+        <canvas id="dailyChart" height="120"></canvas>
+    {% else %}
+        <div class="chart-empty">데이터가 없습니다</div>
+    {% endif %}
+</div>
+
+<!-- 브랜드별 출고 -->
+<div class="chart-box">
+    <h3>🏷 브랜드별 출고</h3>
+
+    {% if brand_labels %}
+        <canvas id="brandChart" height="120"></canvas>
+    {% else %}
+        <div class="chart-empty">데이터가 없습니다</div>
+    {% endif %}
+</div>
+
+<!-- 출고 테이블 -->
+<table>
+    <thead>
+        <tr>
+            <th>일자</th>
+            <th>출고 수량</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if rows %}
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.day }}</td>
+                    <td>{{ row.total_qty }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="2" class="empty">데이터가 없습니다</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+
+<!-- Chart.js -->
+<script>
+    if (dailyLabels.length > 0) {
+        new Chart(document.getElementById("dailyChart"), {
+            type: "line",
+            data: {
+                labels: dailyLabels,
+                datasets: [
+                    {
+                        label: "입고",
+                        data: dailyIn,
+                        borderColor: "#22c55e",
+                        borderWidth: 2,
+                        tension: 0.3
+                    },
+                    {
+                        label: "출고",
+                        data: dailyOut,
+                        borderColor: "#ef4444",
+                        borderWidth: 2,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    if (brandLabels.length > 0) {
+        new Chart(document.getElementById("brandChart"), {
+            type: "bar",
+            data: {
+                labels: brandLabels,
+                datasets: [{
+                    label: "브랜드별 출고",
+                    data: brandValues,
+                    backgroundColor: "#3b82f6"
+                }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    function setThisMonth() {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, "0");
+        const first = `${y}-${m}-01`;
+        const last = new Date(y, today.getMonth() + 1, 0).toISOString().slice(0,10);
+
+        document.querySelector("input[name=start]").value = first;
+        document.querySelector("input[name=end]").value = last;
+    }
+</script>
+
+</body>
+</html>
